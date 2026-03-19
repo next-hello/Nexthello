@@ -289,7 +289,8 @@ function RegisterScreen({ onBack, onSuccess }) {
 
   const createAccount = async () => {
     setLoading(true); setErr('');
-    const isFoundingMember = new Date() < new Date('2026-06-01');
+    // Anyone registering now is a founding member (before 1st June 2025)
+    const isFoundingMember = new Date() < new Date('2025-06-01');
     try {
       const { data, error } = await auth.signUp(d.email, d.password);
       if (error) { setErr(error.message); setLoading(false); return; }
@@ -311,32 +312,6 @@ function RegisterScreen({ onBack, onSuccess }) {
         if (profileError) {
           localStorage.setItem('nh_pending_profile', JSON.stringify(profileData));
         }
-        // Send welcome email
-        try {
-          await window.sendEmail(
-            d.email,
-            `Welcome to Next Hello, ${d.firstName}! 💕`,
-            `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
-              <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
-              <div style="font-size:36px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
-              <p style="font-size:19px;color:#F0DDD4;margin-bottom:6px;">Hi ${d.firstName}! 👋</p>
-              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">Welcome to Next Hello — and congratulations on being one of our very first members! 🎉</p>
-              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">I'm Paul, the founder — yes, a real person actually built this. Not a faceless corporation with a ping pong table and a juice bar. Just someone who got fed up with expensive, impersonal dating sites and decided to do something about it.</p>
-              ${isFoundingMember ? `<div style="background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);border-radius:12px;padding:14px 18px;margin-bottom:16px;"><p style="font-size:14px;color:#FFD700;margin:0;line-height:1.7;">👑 <strong>You're a VIP Founding Member</strong> — which means Next Hello is completely free for you for a full 12 months. Not bad for 3 minutes of your time!</p></div>` : ''}
-              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">A couple of things to get you started:</strong></p>
-              <p style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.8;margin-bottom:16px;">
-                📸 <strong style="color:#fff;">Add a great photo</strong> — smiling ones get the most Hellos. Not your car, not your cat. We have standards. 😄<br/>
-                💕 <strong style="color:#fff;">Browse and say Hello</strong> to anyone who catches your eye — and yes, we know for now you may be mostly saying Hello to yourself until we grow. Bear with us, great things take a little time! 😄<br/>
-                👋 <strong style="color:#fff;">Not interested?</strong> Just say Goodbye — they'll never know<br/>
-                🎉 <strong style="color:#fff;">Check out Events</strong> — meet members in real life
-              </p>
-              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:24px;">If you have any questions, problems, or just want to say hello to the admin team — send us a message directly through the app and we'll get back to you personally. (The 'admin team' is currently just me, Paul, in my front room in Macclesfield — but I'm very friendly and I make a great cup of tea. ☕😄)</p>
-              <a href="https://nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
-              <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong><br/><span style="font-size:12px;color:rgba(255,255,255,0.45);">Founder, Next Hello</span></p>
-              <p style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:24px;line-height:1.6;">Next Hello · Because one Hello can change everything<br/>hello@nexthello.co.uk · nexthello.co.uk</p>
-            </div>`
-          );
-        } catch(e) { console.log('Welcome email failed:', e); }
       } else {
         const profileData = {
           first_name: d.firstName, last_name: d.lastName,
@@ -1034,7 +1009,7 @@ function HellosScreen({ currentUser }) {
     if (!p) return;
     setAiLoading(true); setShowIce(true); setIcebreakers([]);
     try {
-      const res = await fetch("/api/claude", {
+      const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:400,
           system:"Warm dating coach for 50+. Return ONLY a JSON array of 3 icebreaker strings, no markdown.",
@@ -1350,7 +1325,7 @@ function OffersScreen() {
   );
 }
 
-function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onViewHelp }) {
+function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
@@ -1437,7 +1412,7 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
   const generateBios = async () => {
     setAiLoading(true); setShowAI(true); setAiBios([]);
     try {
-      const res = await fetch("/api/claude", {
+      const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:500,
           system:"Dating profile coach for 50+. Return ONLY a JSON array of 3 bio strings, no markdown.",
@@ -1558,16 +1533,6 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
               <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>How Next Hello works · Your rights · Our promises</div>
             </div>
             <div style={{ marginLeft:"auto", fontSize:18, color:C.coral }}>›</div>
-          </div>
-
-          {/* Help button */}
-          <div onClick={onViewHelp} style={{ marginTop:10, background:`linear-gradient(135deg,#E3F2FD,#E8F5E9)`, border:"1.5px solid #90CAF9", borderRadius:16, padding:"14px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:40, height:40, borderRadius:"50%", background:"#1565C0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🤖</div>
-            <div>
-              <div style={{ fontSize:14, fontWeight:700, color:"#1565C0" }}>Help & FAQ — Ask Nell</div>
-              <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>Get instant answers to any question 24/7</div>
-            </div>
-            <div style={{ marginLeft:"auto", fontSize:18, color:"#1565C0" }}>›</div>
           </div>
 
           {/* Danger zone */}
@@ -1705,9 +1670,6 @@ function AdminScreen({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
-  const [messageTarget, setMessageTarget] = useState(null);
-  const [messageText, setMessageText] = useState('');
-  const [messageSending, setMessageSending] = useState(false);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
 
@@ -1793,25 +1755,6 @@ function AdminScreen({ currentUser }) {
     { id:'interests', label:'✨ Interests' },
   ];
 
-  const sendAdminMessage = async () => {
-    if (!messageTarget || !messageText.trim()) return;
-    setMessageSending(true);
-    try {
-      await db.sendMessage({ sender_id: currentUser.id, recipient_id: messageTarget.id, text: `👑 Message from Next Hello founder:\n\n${messageText.trim()}`, read: false });
-      if (messageTarget.email) await window.notifyMessage(messageTarget.email, messageTarget.first_name, 'Paul (Next Hello Founder)');
-      showToast(`Message sent to ${messageTarget.first_name} ✅`);
-      setMessageTarget(null); setMessageText('');
-    } catch(e) { showToast('Failed to send message'); }
-    setMessageSending(false);
-  };
-
-  const QUICK_MESSAGES = [
-    `Hi! Could you please update your profile photo to a clear, recent photo of your face? Members with face photos get far more Hellos! 😊`,
-    `Hi! Welcome to Next Hello! Just a heads up — your profile photo doesn't appear to show your face. A clear photo of you makes a huge difference to the Hellos you receive! 📸`,
-    `Hi! I noticed you haven't added a profile photo yet. Members with photos get 5× more Hellos — add one in your Profile tab! 😊`,
-    `Hi! Just a friendly note from the Next Hello team — please make sure your profile photo shows your face clearly. This helps other members connect with you!`,
-  ];
-
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
       {/* Header */}
@@ -1823,10 +1766,10 @@ function AdminScreen({ currentUser }) {
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)", fontFamily:sf }}>God Mode · {members.length} members</div>
           </div>
         </div>
-        {/* Admin tabs — scrollable */}
-        <div style={{ display:"flex", gap:4, overflowX:"scroll", scrollbarWidth:"none", msOverflowStyle:"none", WebkitOverflowScrolling:"touch", paddingBottom:0 }}>
+        {/* Admin tabs */}
+        <div style={{ display:"flex", gap:4, overflowX:"auto" }}>
           {ADMIN_TABS.map(t => (
-            <button key={t.id} onClick={()=>setAdminTab(t.id)} style={{ padding:"8px 16px", borderRadius:"10px 10px 0 0", background:adminTab===t.id?"#FFD700":"rgba(255,255,255,0.08)", border:"none", color:adminTab===t.id?"#1E1C1B":"rgba(255,255,255,0.7)", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:sf, whiteSpace:"nowrap", flexShrink:0, minWidth:"fit-content" }}>
+            <button key={t.id} onClick={()=>setAdminTab(t.id)} style={{ padding:"8px 14px", borderRadius:"10px 10px 0 0", background:adminTab===t.id?"#FFD700":"rgba(255,255,255,0.08)", border:"none", color:adminTab===t.id?"#1E1C1B":"rgba(255,255,255,0.6)", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:sf, whiteSpace:"nowrap", flexShrink:0 }}>
               {t.label}
             </button>
           ))}
@@ -1875,7 +1818,6 @@ function AdminScreen({ currentUser }) {
                     {m.id !== currentUser?.id && (
                       <button onClick={()=>deleteMember(m)} style={{ padding:"5px 12px", borderRadius:20, background:"#FFEBEE", border:"1px solid #EF9A9A", color:"#C62828", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>🗑 Delete</button>
                     )}
-                    <button onClick={()=>{ setMessageTarget(m); setMessageText(''); }} style={{ padding:"5px 12px", borderRadius:20, background:"#E3F2FD", border:"1px solid #90CAF9", color:"#1565C0", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💬 Message</button>
                     <button onClick={async()=>{ await sb.from('profiles').update({ founding_member:!m.founding_member }).eq('id',m.id); showToast(m.founding_member?'VIP removed':'VIP granted'); loadAll(); }} style={{ padding:"5px 12px", borderRadius:20, background:"rgba(255,215,0,0.15)", border:"1px solid #FFD700", color:"#B8860B", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>
                       {m.founding_member ? '👑 Remove VIP' : '👑 Grant VIP'}
                     </button>
@@ -1957,199 +1899,12 @@ function AdminScreen({ currentUser }) {
         )}
       </div>
 
-      {/* Message Member Modal */}
-      {messageTarget && (
-        <div onClick={e=>{if(e.target===e.currentTarget){setMessageTarget(null);}}} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:50 }}>
-          <div style={{ background:C.white, borderRadius:"22px 22px 0 0", width:"100%", padding:"20px 20px 36px" }}>
-            <div style={{ width:40, height:4, background:"#DDD", borderRadius:2, margin:"0 auto 16px" }}/>
-            <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:4 }}>Message {messageTarget.first_name}</div>
-            <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginBottom:14 }}>Sent as a direct message from Next Hello founder</div>
-
-            {/* Quick message suggestions */}
-            <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>QUICK MESSAGES</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
-              {QUICK_MESSAGES.map((msg, i) => (
-                <div key={i} onClick={()=>setMessageText(msg)} style={{ padding:"9px 12px", borderRadius:12, border:`1.5px solid ${messageText===msg?C.coral:"#DDD8D4"}`, background:messageText===msg?C.coralPale:C.white, fontSize:12, color:C.text, cursor:"pointer", fontFamily:sf, lineHeight:1.5 }}>
-                  {msg.substring(0, 70)}...
-                </div>
-              ))}
-            </div>
-
-            <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:6 }}>YOUR MESSAGE</div>
-            <textarea value={messageText} onChange={e=>setMessageText(e.target.value)} rows={4} placeholder="Type a message to this member..." style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:13, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.6, marginBottom:12 }}/>
-
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setMessageTarget(null)} style={{ flex:1, padding:"13px", borderRadius:14, background:"none", border:"1.5px solid #DDD8D4", color:C.muted, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Cancel</button>
-              <button onClick={sendAdminMessage} disabled={!messageText.trim()||messageSending} style={{ flex:2, padding:"13px", borderRadius:14, background:!messageText.trim()?C.coralPale:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:!messageText.trim()?C.muted:C.white, fontSize:14, fontWeight:700, cursor:!messageText.trim()?"not-allowed":"pointer", fontFamily:sf }}>
-                {messageSending ? "Sending..." : `Send to ${messageTarget.first_name}`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {toast && <div style={{ position:"absolute", bottom:90, left:"50%", transform:"translateX(-50%)", background:C.dark, color:C.white, padding:"10px 20px", borderRadius:30, fontSize:13, fontWeight:600, whiteSpace:"nowrap", zIndex:20, fontFamily:sf }}>{toast}</div>}
     </div>
   );
 }
 
-// ── Help & FAQ Screen ─────────────────────────────────────
-const HELP_SYSTEM_PROMPT = `You are Nell, the friendly AI help assistant for Next Hello — a warm, safe dating app built exclusively for the over 50s.
 
-You were created by Paul Halfpenny, the founder of Next Hello, who built the app because he was fed up with expensive, impersonal dating sites that rip people off.
-
-Your personality: warm, friendly, slightly funny, never patronising. You speak to the over 50s as intelligent adults. You're on their side.
-
-Key facts about Next Hello:
-- Dating app exclusively for the over 50s
-- The Hello System: you say Hello to someone you like. They say Hello back. Only then can you chat. If not interested — just say Goodbye. Nobody is ever notified.
-- Conversations only unlock when BOTH people have said Hello
-- VIP Founding Members: anyone who joins before 1st June 2026 gets free membership for 12 months
-- After the free period: £5/month, pay as you go, cancel anytime, no contracts
-- Photos: up to 6 photos per profile. Please use a real photo of your face — not your car, cat or a sunset from 2003
-- Events: members can create and browse real local events
-- Report & Block: tap the flag icon on any profile to report or block someone
-- All reports go directly to Paul (the founder) and are reviewed within 24 hours
-- Contact: hello@nexthello.co.uk
-- Website: nexthello.co.uk
-
-Rules summary:
-- Must be 50 or over to join
-- Real name and real photos required
-- No romance scamming, no harassment, no fake profiles
-- Events cannot be used for personal monetary gain without permission
-
-If someone asks something you don't know, tell them to contact hello@nexthello.co.uk and Paul will get back to them personally.
-
-Keep responses concise, warm and helpful. Never more than 3-4 sentences unless the question genuinely requires more detail. Always end with a friendly offer to help with anything else.`;
-
-const SUGGESTED_QUESTIONS = [
-  "How does the Hello system work?",
-  "How do I add more photos?",
-  "What is VIP Founding Member status?",
-  "How do I report someone?",
-  "Can I delete my account?",
-  "How much does it cost?",
-  "How do I create an event?",
-  "Why can't I message someone?",
-];
-
-function HelpScreen({ onBack, currentUser }) {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: `Hi there! 👋 I'm Nell, your Next Hello helper. I know everything about how the app works — ask me anything!\n\nNot sure where to start? Tap one of the suggestions below, or just type your question. 😊` }
-  ]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef(null);
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
-
-  const ask = async (question) => {
-    const q = question || input.trim();
-    if (!q) return;
-    setInput('');
-    setLoading(true);
-
-    const newMessages = [...messages, { role:'user', content:q }];
-    setMessages(newMessages);
-
-    try {
-      const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
-      const res = await fetch("/api/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: HELP_SYSTEM_PROMPT,
-          messages: apiMessages,
-        })
-      });
-      const data = await res.json();
-      const reply = data.content?.[0]?.text || "I'm not sure about that one! Please email hello@nexthello.co.uk and Paul will help you personally. 😊";
-      setMessages(prev => [...prev, { role:'assistant', content:reply }]);
-    } catch(e) {
-      setMessages(prev => [...prev, { role:'assistant', content:"Oops, something went wrong at my end! Please try again or email hello@nexthello.co.uk 😊" }]);
-    }
-    setLoading(false);
-  };
-
-  const showSuggestions = messages.length <= 1;
-
-  return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
-      {/* Header */}
-      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"14px 20px 20px", flexShrink:0 }}>
-        <button onClick={onBack} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:10, padding:0 }}>←</button>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🤖</div>
-          <div>
-            <div style={{ fontSize:18, fontWeight:700, color:C.white }}>Nell — Help Assistant</div>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <div style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF50" }}/>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", fontFamily:sf }}>Always here to help</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div style={{ flex:1, overflow:"auto", padding:"16px 16px 8px", display:"flex", flexDirection:"column", gap:12 }}>
-        {messages.map((m, i) => (
-          <div key={i} style={{ display:"flex", justifyContent:m.role==="user"?"flex-end":"flex-start", gap:8, alignItems:"flex-end" }}>
-            {m.role === "assistant" && (
-              <div style={{ width:28, height:28, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0, marginBottom:2 }}>🤖</div>
-            )}
-            <div style={{ maxWidth:"78%", padding:"11px 14px", borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px", background:m.role==="user"?`linear-gradient(135deg,${C.coral},${C.coralMid})`:C.offWhite, color:m.role==="user"?C.white:C.text, fontSize:14, lineHeight:1.65, fontFamily:sf, whiteSpace:"pre-wrap" }}>
-              {m.content}
-            </div>
-          </div>
-        ))}
-
-        {/* Typing indicator */}
-        {loading && (
-          <div style={{ display:"flex", alignItems:"flex-end", gap:8 }}>
-            <div style={{ width:28, height:28, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>🤖</div>
-            <div style={{ padding:"12px 16px", borderRadius:"18px 18px 18px 4px", background:C.offWhite, display:"flex", gap:4, alignItems:"center" }}>
-              {[0,1,2].map(i => (
-                <div key={i} style={{ width:7, height:7, borderRadius:"50%", background:C.muted, animation:`bounce 1.2s ease-in-out ${i*0.2}s infinite` }}/>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Suggested questions */}
-        {showSuggestions && !loading && (
-          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:4 }}>
-            {SUGGESTED_QUESTIONS.map(q => (
-              <button key={q} onClick={()=>ask(q)} style={{ padding:"8px 14px", borderRadius:20, border:`1.5px solid ${C.coral}`, background:C.coralPale, color:C.coral, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:sf, textAlign:"left" }}>
-                {q}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div ref={bottomRef}/>
-      </div>
-
-      {/* Input */}
-      <div style={{ padding:"10px 14px 24px", borderTop:"1px solid #EAE6E2", display:"flex", gap:8, flexShrink:0 }}>
-        <input
-          value={input}
-          onChange={e=>setInput(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&!loading&&ask()}
-          placeholder="Ask Nell anything..."
-          style={{ flex:1, padding:"12px 16px", borderRadius:24, border:`1.5px solid #DDD8D4`, outline:"none", fontSize:14, background:C.offWhite, color:C.text, fontFamily:sf }}
-        />
-        <button onClick={()=>ask()} disabled={!input.trim()||loading} style={{ width:44, height:44, borderRadius:"50%", background:input.trim()&&!loading?C.coral:C.coralPale, border:"none", color:input.trim()&&!loading?C.white:C.muted, fontSize:18, cursor:input.trim()&&!loading?"pointer":"default", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>→</button>
-      </div>
-
-      <style>{`@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }`}</style>
-    </div>
-  );
-}
-
-function RulesScreen({ onBack }) {
   const Section = ({ title, children }) => (
     <div style={{ marginBottom:20 }}>
       <div style={{ fontSize:13, fontWeight:700, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:10, paddingBottom:6, borderBottom:`2px solid ${C.coralPale}` }}>{title.toUpperCase()}</div>
@@ -2377,7 +2132,6 @@ function PhotoUploadScreen({ currentUser, onDone }) {
   if (screen === "photo") return <PhoneShell bg={C.white}><StatusBar light/><PhotoUploadScreen currentUser={currentUser} onDone={()=>setScreen("onboarding")}/></PhoneShell>;
   if (screen === "onboarding") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "rules") return <PhoneShell bg={C.white}><StatusBar light/><RulesScreen onBack={()=>setScreen("app")}/></PhoneShell>;
-  if (screen === "help") return <PhoneShell bg={C.white}><StatusBar light/><HelpScreen onBack={()=>setScreen("app")} currentUser={currentUser}/></PhoneShell>;
 
   return (
     <PhoneShell bg={darkBg?C.dark:safeBg?C.coralPale:C.white}>
@@ -2389,7 +2143,7 @@ function PhotoUploadScreen({ currentUser, onDone }) {
         {tab==="offers" && <OffersScreen/>}
         {tab==="safety" && <SafetyScreen/>}
         {tab==="admin" && isGodMode(currentUser) && <AdminScreen currentUser={currentUser}/>}
-        {tab==="profile" && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")} onViewHelp={()=>setScreen("help")}/>}
+        {tab==="profile" && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")}/>}
       </div>
       <BottomNav active={tab} setActive={setTab} darkBg={darkBg} helloCount={helloCount} isFounder={isGodMode(currentUser)}/>
     </PhoneShell>
