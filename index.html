@@ -119,7 +119,16 @@ const db = {
   sendMessage: (msg) => sb.from('messages').insert(msg),
   sendHello: (fromUser, toUser) => sb.from('hellos').upsert({ from_user: fromUser, to_user: toUser }),
   // Get hellos received by user — with sender profile
-  getHellosReceived: (userId) => sb.from('hellos').select('*, sender:profiles!hellos_from_user_fkey(*)').eq('to_user', userId),
+  getHellosReceived: async (userId) => {
+    const { data, error } = await sb.from('hellos').select('*').eq('to_user', userId);
+    if (error || !data) return { data: [], error };
+    // Fetch sender profiles separately
+    const senderIds = [...new Set(data.map(h => h.from_user))];
+    const { data: profiles } = await sb.from('profiles').select('*').in('id', senderIds);
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.id] = p; });
+    return { data: data.map(h => ({ ...h, sender: profileMap[h.from_user] || null })) };
+  },
   // Get hellos sent by user
   getHellosSent: (userId) => sb.from('hellos').select('to_user').eq('from_user', userId),
   // Check if mutual hello exists
