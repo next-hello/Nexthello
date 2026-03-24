@@ -224,6 +224,8 @@ function LoginScreen({ onBack, onSuccess }) {
   const [pass, setPass] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
 
   const submit = async () => {
     if (!email||!pass) { setErr('Please fill in all fields.'); return; }
@@ -231,6 +233,16 @@ function LoginScreen({ onBack, onSuccess }) {
     const { error } = await auth.signIn(email, pass);
     if (error) { setErr(error.message); setLoading(false); }
     else onSuccess();
+  };
+
+  const sendReset = async () => {
+    const e = resetEmail || email;
+    if (!e) { setErr('Please enter your email address first.'); return; }
+    setLoading(true);
+    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: 'https://nexthellow.netlify.app' });
+    if (error) { setErr(error.message); }
+    else { setResetSent(true); setErr(''); }
+    setLoading(false);
   };
 
   return (
@@ -244,7 +256,10 @@ function LoginScreen({ onBack, onSuccess }) {
         <InputField label="EMAIL ADDRESS" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/>
         <InputField label="PASSWORD" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Your password"/>
         {err && <p style={{ color:C.coral, fontSize:13, fontFamily:sf, marginBottom:10 }}>{err}</p>}
-        <div style={{ textAlign:"right", marginBottom:20 }}><span style={{ fontSize:13, color:C.coral, fontFamily:sf, cursor:"pointer" }}>Forgot password?</span></div>
+        {resetSent && <div style={{ background:"#E8F5E9", borderRadius:12, padding:"12px 16px", marginBottom:16 }}><p style={{ color:"#2E7D32", fontSize:13, fontFamily:sf, margin:0 }}>✅ Password reset email sent! Check your inbox.</p></div>}
+        <div style={{ textAlign:"right", marginBottom:20 }}>
+          <span onClick={sendReset} style={{ fontSize:13, color:C.coral, fontFamily:sf, cursor:"pointer" }}>Forgot password? Tap to reset</span>
+        </div>
         <Btn onClick={submit} disabled={loading}>{loading ? "Signing in..." : "Sign In"}</Btn>
       </div>
     </div>
@@ -298,8 +313,7 @@ function RegisterScreen({ onBack, onSuccess }) {
 
   const createAccount = async () => {
     setLoading(true); setErr('');
-    // Anyone registering now is a founding member (before 1st June 2025)
-    const isFoundingMember = new Date() < new Date('2025-06-01');
+    const isFoundingMember = new Date() < new Date('2026-06-01');
     try {
       const { data, error } = await auth.signUp(d.email, d.password);
       if (error) { setErr(error.message); setLoading(false); return; }
@@ -321,6 +335,31 @@ function RegisterScreen({ onBack, onSuccess }) {
         if (profileError) {
           localStorage.setItem('nh_pending_profile', JSON.stringify(profileData));
         }
+        // Send welcome email
+        try {
+          await window.sendEmail(
+            d.email,
+            `Welcome to Next Hello, ${d.firstName}! 💕`,
+            `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+              <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
+              <div style="font-size:36px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
+              <p style="font-size:19px;color:#F0DDD4;margin-bottom:6px;">Hi ${d.firstName}! 👋</p>
+              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">Welcome to Next Hello — and congratulations on being one of our very first members! 🎉</p>
+              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">I'm Paul, the founder. Not a faceless corporation with a ping pong table and a juice bar. Just someone who got fed up with expensive, impersonal dating sites and decided to do something about it.</p>
+              ${isFoundingMember ? `<div style="background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);border-radius:12px;padding:14px 18px;margin-bottom:16px;"><p style="font-size:14px;color:#FFD700;margin:0;line-height:1.7;">👑 <strong>You're a VIP Founding Member</strong> — Next Hello is completely free for you for a full 12 months. Not bad for a few minutes of your time!</p></div>` : ''}
+              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">A couple of things to get you started:</strong></p>
+              <p style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.8;margin-bottom:16px;">
+                📸 <strong style="color:#fff;">Add a great photo</strong> — smiling ones get the most Hellos. Not your car, not your cat. We have standards. 😄<br/>
+                💕 <strong style="color:#fff;">Browse and say Hello</strong> to anyone who catches your eye — and yes, we know for now you may be mostly saying Hello to yourself until we grow. Bear with us, great things take a little time! 😄<br/>
+                👋 <strong style="color:#fff;">Not interested?</strong> Just say Goodbye — they'll never know<br/>
+                🎉 <strong style="color:#fff;">Check out Events</strong> — meet members in real life
+              </p>
+              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:24px;">If you have any questions — send us a message directly through the app. The 'admin team' is currently just me, Paul, in my front room in Macclesfield — but I'm very friendly and I make a great cup of tea. ☕😄</p>
+              <a href="https://nexthellow.netlify.app" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
+              <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong><br/><span style="font-size:12px;color:rgba(255,255,255,0.45);">Founder, Next Hello</span></p>
+            </div>`
+          );
+        } catch(emailErr) { console.log('Welcome email failed:', emailErr); }
       } else {
         const profileData = {
           first_name: d.firstName, last_name: d.lastName,
@@ -738,26 +777,40 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
   const [blockedIds, setBlockedIds] = useState([]);
   const isFounder = isGodMode(currentUser);
 
-  useEffect(() => { loadProfiles(); }, [founderMode]);
+  const [goodbyeIds, setGoodbyeIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nh_goodbyes') || '[]'); } catch { return []; }
+  });
+
+  useEffect(() => { loadProfiles(); }, [founderMode, goodbyeIds]);
 
   const loadProfiles = async () => {
     setLoading(true);
     const { data } = await db.getProfiles();
     if (data) {
-      let filtered = data.filter(p => p.id !== currentUser?.id && !blockedIds.includes(p.id));
+      let filtered = data.filter(p => p.id !== currentUser?.id && !blockedIds.includes(p.id) && !goodbyeIds.includes(p.id));
       // God Mode: founder sees ALL profiles unfiltered
       if (!isFounder || !founderMode) {
+        const myGender = (prefs?.gender || '').toLowerCase();
         const interestedIn = prefs?.interestedIn || ['Everyone'];
         const wantsEveryone = interestedIn.includes('Everyone') || interestedIn.length === 0;
         if (!wantsEveryone) {
           filtered = filtered.filter(p => {
             const g = (p.gender || '').toLowerCase();
-            if (interestedIn.includes('Women') && (g === 'woman' || g === 'female' || g === 'f')) return true;
-            if (interestedIn.includes('Men') && (g === 'man' || g === 'male' || g === 'm')) return true;
+            if (interestedIn.includes('Women') && (g === 'woman' || g === 'female')) return true;
+            if (interestedIn.includes('Men') && (g === 'man' || g === 'male')) return true;
+            if (interestedIn.includes('Everyone')) return true;
             return false;
           });
         }
-        // Also filter out paused/deactivated profiles
+        // Also filter by who THEY are interested in
+        filtered = filtered.filter(p => {
+          const theirInterest = p.interested_in || ['Everyone'];
+          if (theirInterest.includes('Everyone')) return true;
+          if (theirInterest.includes('Men') && (myGender === 'man' || myGender === 'male')) return true;
+          if (theirInterest.includes('Women') && (myGender === 'woman' || myGender === 'female')) return true;
+          return false;
+        });
+        // Filter out paused/deactivated profiles
         filtered = filtered.filter(p => !p.status || p.status === 'active' || p.status === null);
         if (prefs?.ageMin) filtered = filtered.filter(p => !p.age || p.age >= prefs.ageMin);
         if (prefs?.ageMax && prefs.ageMax < 85) filtered = filtered.filter(p => !p.age || p.age <= prefs.ageMax);
@@ -789,7 +842,15 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
     setTimeout(() => setIdx(i => i+1), 500);
   };
 
-  const sayGoodbye = () => { showToast(`Goodbye 👋`); setIdx(i => i+1); };
+  const sayGoodbye = () => {
+    if (profile) {
+      const newGoodbyes = [...goodbyeIds, profile.id];
+      setGoodbyeIds(newGoodbyes);
+      localStorage.setItem('nh_goodbyes', JSON.stringify(newGoodbyes));
+    }
+    showToast(`Goodbye 👋`);
+    setIdx(i => i+1);
+  };
   const goBack = () => { if (idx > 0) { setIdx(i => i-1); showToast("Going back ←"); } };
 
   const deleteProfile = async (p) => {
@@ -907,7 +968,7 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
               </div>
             )}
             <div style={{ marginTop:16 }}>
-              <div style={{ fontSize:26, fontWeight:700, color:C.white }}>{profile.first_name} {profile.last_name}, {profile.age}</div>
+              <div style={{ fontSize:26, fontWeight:700, color:C.white }}>{profile.first_name}, {profile.age}</div>
               <div style={{ fontSize:13, color:C.muted, marginBottom:12, fontFamily:sf }}>📍 {profile.location}</div>
               <p style={{ fontSize:14, color:"rgba(255,255,255,0.8)", lineHeight:1.7, fontFamily:sf, whiteSpace:"pre-wrap" }}>{profile.bio}</p>
               {sharedTags.length > 0 && (
@@ -1473,7 +1534,7 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
             <input type="file" accept="image/*" onChange={e=>handlePhotoUpload(e,0)} style={{ display:"none" }}/>
           </label>
         </div>
-        <div style={{ fontSize:20, fontWeight:700, color:C.text }}>{profile.first_name} {profile.last_name}{profile.age ? `, ${profile.age}` : ""}</div>
+        <div style={{ fontSize:20, fontWeight:700, color:C.text }}>{profile.first_name}{profile.age ? `, ${profile.age}` : ""}</div>
         <div style={{ fontSize:13, color:C.muted, fontFamily:sf, marginTop:2 }}>📍 {profile.location}</div>
         <div style={{ display:"flex", gap:6, justifyContent:"center", flexWrap:"wrap", marginTop:6 }}>
           {profile.verified && <div style={{ background:C.coralPale, borderRadius:20, padding:"3px 12px", fontSize:12, color:C.coral, fontWeight:600, fontFamily:sf }}>✓ Verified</div>}
@@ -1558,7 +1619,7 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
               <div style={{ background:C.white, borderRadius:"22px 22px 0 0", width:"100%", maxWidth:390, padding:"20px 22px 40px", fontFamily:sf }}>
                 <div style={{ width:40, height:4, background:"#DDD", borderRadius:2, margin:"0 auto 20px" }}/>
                 <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:4 }}>Manage Your Account</div>
-                <div style={{ fontSize:13, color:C.muted, marginBottom:20, lineHeight:1.5 }}>What would you like to do? Your email address will always be retained so we can keep in touch.</div>
+                <div style={{ fontSize:13, color:C.muted, marginBottom:20, lineHeight:1.5 }}>What would you like to do? If you permanently delete your account, all your data is completely removed from our systems in line with GDPR and UK data protection law.</div>
 
                 <button onClick={async()=>{ await db.pauseProfile(currentUser.id); setShowDeleteModal(false); onSignOut(); }} style={{ width:"100%", padding:"14px", borderRadius:14, background:"#FFF8E1", border:"1.5px solid #FFD54F", color:"#F57F17", fontSize:14, fontWeight:700, cursor:"pointer", marginBottom:10, display:"flex", alignItems:"center", gap:10, textAlign:"left" }}>
                   <span style={{fontSize:20}}>⏸</span>
@@ -1590,6 +1651,21 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
           )}
         </> : (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {/* Bug 10 fix - allow editing name and location */}
+            <div style={{ display:"flex", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>FIRST NAME</label>
+                <input value={draft.first_name||""} onChange={e=>setDraft(d=>({...d,first_name:e.target.value}))} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>LAST NAME</label>
+                <input value={draft.last_name||""} onChange={e=>setDraft(d=>({...d,last_name:e.target.value}))} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+              </div>
+            </div>
+            <div>
+              <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>LOCATION</label>
+              <input value={draft.location||""} onChange={e=>setDraft(d=>({...d,location:e.target.value}))} placeholder="e.g. Manchester" style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+            </div>
             <div>
               <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>BIO</label>
               <textarea value={draft.bio||""} onChange={e=>setDraft(d=>({...d,bio:e.target.value}))} rows={4} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.6 }}/>
@@ -1679,6 +1755,27 @@ function AdminScreen({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [messageTarget, setMessageTarget] = useState(null);
+  const [messageText, setMessageText] = useState('');
+  const [messageSending, setMessageSending] = useState(false);
+
+  const QUICK_MESSAGES = [
+    `Hi! Could you please update your profile photo to a clear, recent photo of your face? Members with face photos get far more Hellos! 😊`,
+    `Hi! Welcome to Next Hello! Just a heads up — your profile photo doesn't appear to show your face. A clear photo of you makes a huge difference! 📸`,
+    `Hi! I noticed you haven't added a profile photo yet. Members with photos get 5× more Hellos — add one in your Profile tab! 😊`,
+    `Hi! Just a friendly note from the Next Hello team — please make sure your profile photo shows your face clearly. This helps other members connect with you!`,
+  ];
+
+  const sendAdminMessage = async () => {
+    if (!messageTarget || !messageText.trim()) return;
+    setMessageSending(true);
+    try {
+      await db.sendMessage({ sender_id: currentUser.id, recipient_id: messageTarget.id, text: `👑 Message from Next Hello founder:\n\n${messageText.trim()}`, read: false });
+      showToast(`Message sent to ${messageTarget.first_name} ✅`);
+      setMessageTarget(null); setMessageText('');
+    } catch(e) { showToast('Failed to send message'); }
+    setMessageSending(false);
+  };
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
 
@@ -1827,6 +1924,7 @@ function AdminScreen({ currentUser }) {
                     {m.id !== currentUser?.id && (
                       <button onClick={()=>deleteMember(m)} style={{ padding:"5px 12px", borderRadius:20, background:"#FFEBEE", border:"1px solid #EF9A9A", color:"#C62828", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>🗑 Delete</button>
                     )}
+                    <button onClick={()=>{ setMessageTarget(m); setMessageText(''); }} style={{ padding:"5px 12px", borderRadius:20, background:"#E3F2FD", border:"1px solid #90CAF9", color:"#1565C0", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💬 Message</button>
                     <button onClick={async()=>{ await sb.from('profiles').update({ founding_member:!m.founding_member }).eq('id',m.id); showToast(m.founding_member?'VIP removed':'VIP granted'); loadAll(); }} style={{ padding:"5px 12px", borderRadius:20, background:"rgba(255,215,0,0.15)", border:"1px solid #FFD700", color:"#B8860B", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>
                       {m.founding_member ? '👑 Remove VIP' : '👑 Grant VIP'}
                     </button>
@@ -1908,259 +2006,126 @@ function AdminScreen({ currentUser }) {
         )}
       </div>
 
+      {/* Message Member Modal */}
+      {messageTarget && (
+        <div onClick={e=>{if(e.target===e.currentTarget)setMessageTarget(null);}} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:50 }}>
+          <div style={{ background:C.white, borderRadius:"22px 22px 0 0", width:"100%", padding:"20px 20px 36px" }}>
+            <div style={{ width:40, height:4, background:"#DDD", borderRadius:2, margin:"0 auto 16px" }}/>
+            <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:4 }}>Message {messageTarget.first_name}</div>
+            <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginBottom:14 }}>Sent as a direct message from Paul (Next Hello founder)</div>
+            <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>QUICK MESSAGES</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
+              {QUICK_MESSAGES.map((msg, i) => (
+                <div key={i} onClick={()=>setMessageText(msg)} style={{ padding:"9px 12px", borderRadius:12, border:`1.5px solid ${messageText===msg?C.coral:"#DDD8D4"}`, background:messageText===msg?C.coralPale:C.white, fontSize:12, color:C.text, cursor:"pointer", fontFamily:sf, lineHeight:1.5 }}>
+                  {msg.substring(0, 70)}...
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:6 }}>YOUR MESSAGE</div>
+            <textarea value={messageText} onChange={e=>setMessageText(e.target.value)} rows={4} placeholder="Type a message..." style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:13, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.6, marginBottom:12 }}/>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setMessageTarget(null)} style={{ flex:1, padding:"13px", borderRadius:14, background:"none", border:"1.5px solid #DDD8D4", color:C.muted, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Cancel</button>
+              <button onClick={sendAdminMessage} disabled={!messageText.trim()||messageSending} style={{ flex:2, padding:"13px", borderRadius:14, background:messageText.trim()?`linear-gradient(135deg,${C.coral},${C.coralMid})`:C.coralPale, border:"none", color:messageText.trim()?C.white:C.muted, fontSize:14, fontWeight:700, cursor:messageText.trim()?"pointer":"default", fontFamily:sf }}>
+                {messageSending ? "Sending..." : `Send to ${messageTarget.first_name}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && <div style={{ position:"absolute", bottom:90, left:"50%", transform:"translateX(-50%)", background:C.dark, color:C.white, padding:"10px 20px", borderRadius:30, fontSize:13, fontWeight:600, whiteSpace:"nowrap", zIndex:20, fontFamily:sf }}>{toast}</div>}
     </div>
   );
 }
 
-function RulesScreen({ onBack }) {
-  const Section = ({ title, children }) => (
-    <div style={{ marginBottom:20 }}>
-      <div style={{ fontSize:13, fontWeight:700, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:10, paddingBottom:6, borderBottom:`2px solid ${C.coralPale}` }}>{title.toUpperCase()}</div>
-      {children}
-    </div>
-  );
-  const Rule = ({ title, body }) => (
-    <div style={{ marginBottom:10, paddingLeft:12, borderLeft:`3px solid ${C.coralPale}` }}>
-      <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:2 }}>{title}</div>
-      <div style={{ fontSize:12, color:C.muted, lineHeight:1.6, fontFamily:sf }}>{body}</div>
-    </div>
-  );
+// ── Help Screen ───────────────────────────────────────────
+const HELP_SYSTEM_PROMPT = `You are Nell, the friendly AI help assistant for Next Hello — a warm, safe dating app built exclusively for the over 50s. Created by Paul Halfpenny, founder.
+
+Your personality: warm, friendly, slightly funny, never patronising.
+
+Key facts:
+- The Hello System: say Hello to someone you like. They say Hello back. Only then can you chat. Say Goodbye if not interested — they never know.
+- VIP Founding Members: anyone joining before 1st June 2026 gets free membership for 12 months
+- After free period: £5/month, cancel anytime
+- Up to 6 photos per profile
+- Events tab: create and browse local events
+- Report & Block: flag icon on any profile
+- Contact: hello@nexthello.co.uk
+
+Keep responses warm, concise and friendly. If unsure, direct to hello@nexthello.co.uk.`;
+
+const SUGGESTED_QUESTIONS = [
+  "How does the Hello system work?",
+  "How do I add more photos?",
+  "What is VIP Founding Member status?",
+  "How do I report someone?",
+  "Can I delete my account?",
+  "How much does it cost?",
+  "How do I create an event?",
+  "Why can't I message someone?",
+];
+
+function HelpScreen({ onBack, currentUser }) {
+  const [messages, setMessages] = useState([
+    { role:'assistant', content:`Hi there! 👋 I'm Nell, your Next Hello helper. I know everything about how the app works — ask me anything!\n\nNot sure where to start? Tap one of the suggestions below, or just type your question. 😊` }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
+
+  const ask = async (question) => {
+    const q = question || input.trim();
+    if (!q) return;
+    setInput('');
+    setLoading(true);
+    const newMessages = [...messages, { role:'user', content:q }];
+    setMessages(newMessages);
+    try {
+      const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system: HELP_SYSTEM_PROMPT,
+          messages: newMessages.map(m => ({ role:m.role, content:m.content })),
+        })
+      });
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || "I'm not sure about that one! Please email hello@nexthello.co.uk and Paul will help you personally. 😊";
+      setMessages(prev => [...prev, { role:'assistant', content:reply }]);
+    } catch(e) {
+      setMessages(prev => [...prev, { role:'assistant', content:"Oops, something went wrong at my end! Please try again or email hello@nexthello.co.uk 😊" }]);
+    }
+    setLoading(false);
+  };
+
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
       <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"14px 20px 20px", flexShrink:0 }}>
         <button onClick={onBack} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:10, padding:0 }}>←</button>
-        <div style={{ fontSize:22, fontWeight:700, color:C.white }}>Community Guidelines</div>
-        <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", fontFamily:sf, marginTop:4 }}>Next Hello · Effective 1st March 2026</div>
-      </div>
-      <div style={{ flex:1, overflow:"auto", padding:"20px 20px 40px" }}>
-        <div style={{ background:C.coralPale, borderRadius:14, padding:"14px 16px", marginBottom:20, display:"flex", gap:12, alignItems:"flex-start" }}>
-          <span style={{ fontSize:24 }}>💌</span>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🤖</div>
           <div>
-            <div style={{ fontSize:13, fontWeight:700, color:C.coral, marginBottom:4 }}>My Promise to You</div>
-            <p style={{ fontSize:12, color:C.text, fontFamily:sf, margin:0, lineHeight:1.6 }}>Next Hello was built for people like me — over 50, looking for genuine connection. These guidelines keep our community warm, safe, and honest for everyone.</p>
-            <p style={{ fontSize:12, color:C.muted, fontFamily:sf, margin:"6px 0 0", fontStyle:"italic" }}>— Paul Halfpenny, Founder</p>
+            <div style={{ fontSize:18, fontWeight:700, color:C.white }}>Nell — Help Assistant</div>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF50" }}/>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", fontFamily:sf }}>Always here to help</div>
+            </div>
           </div>
         </div>
-
-        <Section title="The Hello System">
-          <Rule title="💕 Hello" body="Tap Hello to show you're interested. It adds them to your favourites and lets them know."/>
-          <Rule title="👋 Goodbye" body="Tap Goodbye to move on gracefully. The other person is never notified — ever."/>
-          <Rule title="💬 Conversations" body="Chat only opens when BOTH of you have said Hello. If someone Hellos you and you're not interested — simply don't respond. No explanation needed."/>
-          <Rule title="🔄 Repeated Hellos" body="Sending repeated Hellos after no response is considered harassment and may result in suspension."/>
-        </Section>
-
-        <Section title="Community Rules">
-          <Rule title="1. Be Genuine" body="Use your real name, real photos, and honest information. You must be aged 50 or over."/>
-          <Rule title="2. Be Respectful" body="Treat every member with kindness and respect. Offensive or abusive messages result in immediate removal."/>
-          <Rule title="3. Be Safe" body="Never share your home address, financial details, or passwords with another member. Always meet in public first."/>
-          <Rule title="4. Be Honest" body="Do not promote a business or solicit money. Romance scamming results in permanent removal and may be reported to police."/>
-          <Rule title="5. Keep It Legal" body="No illegal, harmful, sexually explicit, or hateful content. No harassment or stalking."/>
-          <Rule title="6. Events" body="Events must be genuinely social and not for personal monetary gain without prior permission from Next Hello."/>
-        </Section>
-
-        <Section title="Reporting & Blocking">
-          <Rule title="🚩 Report" body="Tap the Report button on any profile. All reports go directly to the founder and are reviewed within 24 hours. Completely confidential."/>
-          <Rule title="🚫 Block" body="Block any member instantly. They can never contact you or see your profile. They are never told."/>
-        </Section>
-
-        <Section title="What Happens If You Break the Rules">
-          {[["⚠️ Warning","Private message for minor issues"],["⏸ Suspension","7–30 day removal for repeated issues"],["🚫 Permanent Ban","Immediate removal for scamming, abuse, or illegal content"]].map(([e,b])=>(
-            <Rule key={e} title={e} body={b}/>
-          ))}
-        </Section>
-
-        <Section title="VIP Founding Member Status">
-          <p style={{ fontSize:13, color:C.text, fontFamily:sf, lineHeight:1.7, marginBottom:10 }}>Members who join before 1st June 2026 receive <strong>VIP Founding Member status for one full year</strong> — including free membership.</p>
-          <p style={{ fontSize:13, color:C.text, fontFamily:sf, lineHeight:1.7 }}>This is only removed if you delete your account or break these guidelines. After one year, membership is £5/month — pay as you go, cancel anytime.</p>
-          <p style={{ fontSize:12, color:C.muted, fontFamily:sf, lineHeight:1.6, marginTop:8, fontStyle:"italic" }}>This is my personal promise. — Paul</p>
-        </Section>
-
-        <div style={{ background:C.offWhite, borderRadius:14, padding:"14px 16px", textAlign:"center" }}>
-          <p style={{ fontSize:12, color:C.muted, fontFamily:sf, margin:0, lineHeight:1.6 }}>Questions or concerns?<br/><span style={{ color:C.coral, fontWeight:600 }}>hello@nexthello.co.uk</span></p>
-          <p style={{ fontSize:11, color:"#CCC", fontFamily:sf, margin:"8px 0 0" }}>© 2026 Next Hello. All rights reserved.</p>
-        </div>
       </div>
-    </div>
-  );
-}
-
-// ── Safety Screen ─────────────────────────────────────────
-function SafetyScreen() {
-  const TIPS=[{e:"🛡️",t:"Trust your instincts",b:"If something feels off, it probably is. Don't feel pressured to continue any interaction that makes you uncomfortable."},{e:"🏙️",t:"Meet in public",b:"Always choose a busy, public place for your first few meetings."},{e:"📍",t:"Tell a friend",b:"Let someone you trust know where you're going, who you're meeting, and when you expect to be back."},{e:"🔒",t:"Protect your data",b:"Never share your home address, workplace, financial details, or passwords with someone you've just met."},{e:"🚗",t:"Your own transport",b:"Arrange your own way to and from a date so you're never dependent on someone you've just met."},{e:"📱",t:"Stay charged",b:"Keep your phone charged before a date so you can always call for help if needed."}];
-  return (
-    <div style={{ flex:1, background:C.coralPale, overflow:"auto" }}>
-      <div style={{ padding:"16px 20px 10px" }}><div style={{ fontSize:26, fontWeight:700, color:C.coral }}>Safety Tips</div><div style={{ fontSize:13, color:C.muted, fontFamily:sf, marginTop:2 }}>Your safety is our priority at Next Hello.</div></div>
-      <div style={{ padding:"0 14px 20px", display:"flex", flexDirection:"column", gap:10 }}>
-        {TIPS.map((tip,i)=>(
-          <div key={i} style={{ background:C.white, borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"flex-start", gap:14, boxShadow:"0 1px 6px rgba(0,0,0,0.06)" }}>
-            <div style={{ width:44, height:44, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{tip.e}</div>
-            <div><div style={{ fontWeight:700, fontSize:15, color:C.text, marginBottom:3 }}>{tip.t}</div><div style={{ fontSize:13, color:"#555", lineHeight:1.55, fontFamily:sf }}>{tip.b}</div></div>
+      <div style={{ flex:1, overflow:"auto", padding:"16px 16px 8px", display:"flex", flexDirection:"column", gap:12 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ display:"flex", justifyContent:m.role==="user"?"flex-end":"flex-start", gap:8, alignItems:"flex-end" }}>
+            {m.role==="assistant" && <div style={{ width:28, height:28, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>🤖</div>}
+            <div style={{ maxWidth:"78%", padding:"11px 14px", borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px", background:m.role==="user"?`linear-gradient(135deg,${C.coral},${C.coralMid})`:C.offWhite, color:m.role==="user"?C.white:C.text, fontSize:14, lineHeight:1.65, fontFamily:sf, whiteSpace:"pre-wrap" }}>
+              {m.content}
+            </div>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Root App ──────────────────────────────────────────────
-function App() {
-  const [screen, setScreen] = useState("splash");
-  const [tab, setTab] = useState("browse");
-  const [currentUser, setCurrentUser] = useState(null);
-  const [prefs, setPrefs] = useState({ interestedIn:["Everyone"], ageMin:50, ageMax:85, interests:[] });
-  const [helloCount, setHelloCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check if already logged in
-    auth.getUser().then(({ data }) => {
-      if (data?.user) { setCurrentUser(data.user); setScreen("app"); }
-      setLoading(false);
-    });
-    // Listen for auth changes
-    const { data: { subscription } } = auth.onAuthChange((event, session) => {
-      if (session?.user) { setCurrentUser(session.user); setScreen("app"); }
-      else { setCurrentUser(null); setScreen("splash"); }
-    });
-    return () => subscription?.unsubscribe();
-  }, []);
-
-  const handleSignOut = async () => {
-    await auth.signOut();
-    setCurrentUser(null);
-    setScreen("splash");
-    setTab("browse");
-  };
-
-// ── Photo Upload Screen (mandatory after registration) ────
-function PhotoUploadScreen({ currentUser, onDone }) {
-  const [uploading, setUploading] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState(null);
-  const [err, setErr] = useState('');
-  const inputRef = useRef(null);
-
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true); setErr('');
-    try {
-      const url = await window.uploadPhoto(file);
-      await sb.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
-      setPhotoUrl(url);
-    } catch(err) { setErr('Upload failed. Please try again.'); }
-    setUploading(false);
-  };
-
-  return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
-      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"30px 24px 28px" }}>
-        <div style={{ fontSize:26, fontWeight:700, color:C.white, marginBottom:4 }}>Add your photo</div>
-        <div style={{ fontSize:14, color:"rgba(255,255,255,0.8)", fontFamily:sf }}>Members with a photo get 10× more Hellos!</div>
-      </div>
-      <div style={{ flex:1, overflow:"auto", padding:"24px 28px", display:"flex", flexDirection:"column", gap:20 }}>
-
-        {/* Amusing note */}
-        <div style={{ background:"#FFF8F0", border:"1.5px solid #FFD580", borderRadius:16, padding:"16px 18px" }}>
-          <div style={{ fontSize:13, fontWeight:700, color:"#B8860B", fontFamily:sf, marginBottom:8 }}>📸 A quick note before you upload...</div>
-          <p style={{ fontSize:13, color:"#5D4E00", fontFamily:sf, margin:0, lineHeight:1.75 }}>
-            We'd love to see <strong>YOU</strong> — your actual face, your genuine smile, the real you.<br/><br/>
-            Not your car. Not your cat. Not a sunset from 2003.<br/><br/>
-            This is a dating app, not AutoTrader. And while Whiskers is no doubt adorable, it's <em>you</em> people want to meet.<br/><br/>
-            One clear, recent photo of your lovely face is all we ask. You've got this! 😄
-          </p>
-        </div>
-
-        {/* Photo upload circle */}
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14 }}>
-          <div onClick={()=>inputRef.current?.click()} style={{ width:140, height:140, borderRadius:"50%", border:`3px dashed ${photoUrl?C.coral:"#DDD8D4"}`, background:photoUrl?"transparent":C.offWhite, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", overflow:"hidden", position:"relative" }}>
-            {photoUrl ? (
-              <img src={photoUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt=""/>
-            ) : (
-              <div style={{ textAlign:"center" }}>
-                <div style={{ fontSize:48 }}>📷</div>
-                <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:6 }}>Tap to add photo</div>
-              </div>
-            )}
-            {uploading && (
-              <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <div style={{ fontSize:13, color:C.white, fontFamily:sf }}>Uploading...</div>
-              </div>
-            )}
-          </div>
-          <input ref={inputRef} type="file" accept="image/*" onChange={handleUpload} style={{ display:"none" }}/>
-          {err && <p style={{ fontSize:13, color:C.coral, fontFamily:sf, textAlign:"center" }}>{err}</p>}
-          {photoUrl && (
-            <div style={{ background:"#E8F5E9", borderRadius:14, padding:"10px 16px", display:"flex", gap:8, alignItems:"center" }}>
-              <span style={{ fontSize:18 }}>✅</span>
-              <span style={{ fontSize:13, color:"#2E7D32", fontFamily:sf }}>Looking great! Photo uploaded.</span>
-            </div>
-          )}
-        </div>
-
-        <div style={{ background:C.coralPale, borderRadius:14, padding:"12px 16px" }}>
-          <p style={{ fontSize:12, color:C.coral, fontFamily:sf, margin:0, lineHeight:1.6, textAlign:"center" }}>
-            💡 <strong>Tips:</strong> Good lighting · Face clearly visible · Smiling · Recent photo<br/>
-            Smiling photos get significantly more Hellos — fact! 😊
-          </p>
-        </div>
-      </div>
-      <div style={{ padding:"12px 24px 28px", borderTop:"1px solid #EAE6E2", display:"flex", flexDirection:"column", gap:10 }}>
-        <Btn onClick={onDone} disabled={!photoUrl}>
-          {photoUrl ? "Let's go! →" : "Please add a photo to continue"}
-        </Btn>
-        <button onClick={onDone} style={{ background:"none", border:"none", color:C.muted, fontSize:13, fontFamily:sf, cursor:"pointer", padding:"6px" }}>
-          Skip for now (you can add one later)
-        </button>
-      </div>
-    </div>
-  );
-}
-
-  if (loading) return (
-    <PhoneShell bg={C.dark}>
-      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
-        <div style={{ display:"flex", gap:3 }}>{[0,1,2].map(i=><div key={i} style={{ width:3.5, height:16, background:C.coral, borderRadius:2 }}/>)}</div>
-        <div style={{ fontSize:13, color:C.muted, fontFamily:sf }}>Loading Next Hello...</div>
-      </div>
-    </PhoneShell>
-  );
-
-  const handleRegisterSuccess = (newPrefs) => {
-    if (newPrefs) setPrefs(newPrefs);
-    setScreen("photo");
-  };
-
-  const darkBg = tab === "browse";
-  const safeBg = tab === "safety";
-
-  if (screen === "splash") return <PhoneShell bg={C.dark}><StatusBar/><SplashScreen onLogin={()=>setScreen("login")} onRegister={()=>setScreen("onboarding-reg")}/></PhoneShell>;
-  if (screen === "onboarding-reg") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("register")} ctaText="Create My Profile →"/></PhoneShell>;
-  if (screen === "login") return <PhoneShell bg={C.white}><StatusBar light/><LoginScreen onBack={()=>setScreen("splash")} onSuccess={()=>setScreen("app")}/></PhoneShell>;
-  if (screen === "register") return <PhoneShell bg={C.white}><StatusBar light/><RegisterScreen onBack={()=>setScreen("splash")} onSuccess={handleRegisterSuccess}/></PhoneShell>;
-  if (screen === "photo") return <PhoneShell bg={C.white}><StatusBar light/><PhotoUploadScreen currentUser={currentUser} onDone={()=>setScreen("onboarding")}/></PhoneShell>;
-  if (screen === "onboarding") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("app")}/></PhoneShell>;
-  if (screen === "rules") return <PhoneShell bg={C.white}><StatusBar light/><RulesScreen onBack={()=>setScreen("app")}/></PhoneShell>;
-
-  return (
-    <PhoneShell bg={darkBg?C.dark:safeBg?C.coralPale:C.white}>
-      <StatusBar light={!darkBg&&!safeBg}/>
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", position:"relative" }}>
-        {tab==="browse" && <BrowseScreen currentUser={currentUser} prefs={prefs}/>}
-        {tab==="hellos" && <HellosScreen currentUser={currentUser}/>}
-        {tab==="events" && <EventsScreen currentUser={currentUser}/>}
-        {tab==="offers" && <OffersScreen/>}
-        {tab==="safety" && <SafetyScreen/>}
-        {tab==="admin" && isGodMode(currentUser) && <AdminScreen currentUser={currentUser}/>}
-        {tab==="profile" && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")}/>}
-      </div>
-      <BottomNav active={tab} setActive={setTab} darkBg={darkBg} helloCount={helloCount} isFounder={isGodMode(currentUser)}/>
-    </PhoneShell>
-  );
-}
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App/>);
-</script>
-</body>
-</html>
+        {loading && (
+          <div style={{ display:"flex", alignItems:"flex-end", gap:8 }}>
+            <div style={{ width:28, height:28, borderRadius:"50%", background:
