@@ -1035,16 +1035,24 @@ function HellosScreen({ currentUser }) {
   const [tab, setTab] = useState('received'); // received | sent | matches
   const bottomRef = useRef(null);
 
-  useEffect(() => { loadHellos(); }, []);
+  useEffect(() => { 
+    if (currentUser?.id) {
+      loadHellos(); 
+    }
+  }, [currentUser?.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages.length]);
 
   const loadHellos = async () => {
+    if (!currentUser?.id) return;
     setLoading(true);
     try {
+      console.log('Loading hellos for user ID:', currentUser?.id);
       // Get hellos received
-      const { data: received } = await db.getHellosReceived(currentUser?.id);
+      const { data: received, error: recError } = await db.getHellosReceived(currentUser?.id);
+      console.log('Received hellos:', received, 'Error:', recError);
       // Get hellos sent
-      const { data: sent } = await db.getHellosSent(currentUser?.id);
+      const { data: sent, error: sentError } = await db.getHellosSent(currentUser?.id);
+      console.log('Sent hellos:', sent, 'Error:', sentError);
       const sentIds = (sent || []).map(h => h.to_user);
 
       if (received) {
