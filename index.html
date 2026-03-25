@@ -1052,6 +1052,12 @@ function HellosScreen({ currentUser }) {
 
   const loadHellos = async () => {
     if (!currentUser?.id) return;
+    // Validate UUID format before sending to Supabase
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(currentUser.id)) {
+      console.error('loadHellos: invalid user ID format:', currentUser.id);
+      return;
+    }
     setLoading(true);
     try {
       console.log('Loading hellos for user ID:', currentUser?.id);
