@@ -825,6 +825,13 @@ const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 2200); 
 const sendHello = async () => {
 if (!profile || !currentUser) return;
 await db.sendHello(currentUser.id, profile.id);
+const isMatch = await db.checkMutualHello(currentUser.id, profile.id);
+
+if (isMatch) {
+  // unlock messaging
+  // update UI
+  // refresh state
+}
 if (!favourites.includes(profile.id)) setFavourites(f => [...f, profile.id]);
 onSendHello && onSendHello(profile);
 // Send email notification to the person receiving the Hello
