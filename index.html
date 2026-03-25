@@ -117,7 +117,12 @@ const db = {
     .or(`and(sender_id.eq.${userId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${userId})`)
     .order('created_at', { ascending: true }),
   sendMessage: (msg) => sb.from('messages').insert(msg),
-  sendHello: (fromUser, toUser) => sb.from('hellos').upsert({ from_user: fromUser, to_user: toUser }, { onConflict: 'from_user,to_user' }),
+  sendHello: async (fromUser, toUser) => {
+    // Check if hello already exists — avoid 409 conflict
+    const { data: existing } = await sb.from('hellos').select('id').eq('from_user', fromUser).eq('to_user', toUser).maybeSingle();
+    if (existing) return { data: existing, error: null };
+    return await sb.from('hellos').insert({ from_user: fromUser, to_user: toUser });
+  },
   // Get hellos received by user — with sender profile
   getHellosReceived: async (userId) => {
     const { data, error } = await sb.from('hellos').select('*').eq('to_user', userId);
