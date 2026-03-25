@@ -118,10 +118,7 @@ const db = {
     .order('created_at', { ascending: true }),
   sendMessage: (msg) => sb.from('messages').insert(msg),
   sendHello: async (fromUser, toUser) => {
-    // Check if hello already exists — avoid 409 conflict
-    const { data: existing } = await sb.from('hellos').select('id').eq('from_user', fromUser).eq('to_user', toUser).maybeSingle();
-    if (existing) return { data: existing, error: null };
-    return await sb.from('hellos').insert({ from_user: fromUser, to_user: toUser });
+    return await sb.rpc('send_hello', { p_from: fromUser, p_to: toUser });
   },
   // Get hellos received by user — with sender profile
   getHellosReceived: async (userId) => {
@@ -953,8 +950,8 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
             <button onClick={sayGoodbye} style={{ flex:1, padding:"14px", borderRadius:16, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
               <span>👋</span> Goodbye
             </button>
-            <button onClick={sendHello} style={{ flex:2, padding:"14px", borderRadius:16, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:`0 4px 16px rgba(200,97,74,0.4)`, fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-              <span>💕</span> Hello
+            <button onClick={favourites.includes(profile?.id) ? null : sendHello} style={{ flex:2, padding:"14px", borderRadius:16, background:favourites.includes(profile?.id)?`linear-gradient(135deg,#4CAF50,#388E3C)`:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:15, fontWeight:700, cursor:favourites.includes(profile?.id)?"default":"pointer", boxShadow:`0 4px 16px rgba(200,97,74,0.4)`, fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              <span>{favourites.includes(profile?.id) ? "✅" : "💕"}</span> {favourites.includes(profile?.id) ? "Hello Sent!" : "Hello"}
             </button>
           </div>
         </> : (
