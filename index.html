@@ -112,6 +112,7 @@ const { data, error } = await sb.from('hellos').select('*').eq('to_user', userId
 if (error || !data) return { data: [], error };
 // Fetch sender profiles separately
 const senderIds = [...new Set(data.map(h => h.from_user))];
+if (senderIds.length === 0) return { data: [] };
 const { data: profiles } = await sb.from('profiles').select('*').in('id', senderIds);
 const profileMap = {};
 (profiles || []).forEach(p => { profileMap[p.id] = p; });
