@@ -117,7 +117,7 @@ const db = {
     .or(`and(sender_id.eq.${userId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${userId})`)
     .order('created_at', { ascending: true }),
   sendMessage: (msg) => sb.from('messages').insert(msg),
-  sendHello: (fromUser, toUser) => sb.from('hellos').upsert({ from_user: fromUser, to_user: toUser }),
+  sendHello: (fromUser, toUser) => sb.from('hellos').upsert({ from_user: fromUser, to_user: toUser }, { onConflict: 'from_user,to_user' }),
   // Get hellos received by user — with sender profile
   getHellosReceived: async (userId) => {
     const { data, error } = await sb.from('hellos').select('*').eq('to_user', userId);
@@ -132,7 +132,10 @@ const db = {
     return { data: data.map(h => ({ ...h, sender: profileMap[h.from_user] || null })) };
   },
   // Get hellos sent by user
-  getHellosSent: (userId) => sb.from('hellos').select('to_user').eq('from_user', userId),
+  getHellosSent: async (userId) => {
+    const { data, error } = await sb.from('hellos').select('to_user').eq('from_user', userId);
+    return { data: data || [], error };
+  },
   // Check if mutual hello exists
   checkMutualHello: async (userA, userB) => {
     const { data: a } = await sb.from('hellos').select('id').eq('from_user', userA).eq('to_user', userB);
