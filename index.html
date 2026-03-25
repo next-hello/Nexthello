@@ -188,6 +188,7 @@ const Btn = ({ children, onClick, outline, disabled, small }) => (
 function PhoneShell({ children, bg=C.dark }) {
   return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
+      <div style={{ position:"fixed", top:8, left:8, background:"#FF0000", color:"#fff", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:4, zIndex:9999, fontFamily:"monospace" }}>BUILD: hello-fix-v3</div>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
       </div>
@@ -2446,6 +2447,7 @@ function PhotoUploadScreen({ currentUser, onDone }) {
   );
 }
 
+console.log("BUILD: hello-fix-v3 loaded");
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App/>);
 </script>
