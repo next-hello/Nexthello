@@ -3,6 +3,12 @@
   publish = "."
 
 [[redirects]]
+  from = "/*"
+  to = "https://nexthello.netlify.app/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "/api/claude"
   to = "/.netlify/functions/claude"
   status = 200

@@ -248,7 +248,7 @@ function LoginScreen({ onBack, onSuccess }) {
     const e = resetEmail || email;
     if (!e) { setErr('Please enter your email address first.'); return; }
     setLoading(true);
-    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: 'https://nexthellow.netlify.app' });
+    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: 'https://nexthello.co.uk' });
     if (error) { setErr(error.message); }
     else { setResetSent(true); setErr(''); }
     setLoading(false);
@@ -364,7 +364,7 @@ function RegisterScreen({ onBack, onSuccess }) {
                 🎉 <strong style="color:#fff;">Check out Events</strong> — meet members in real life
               </p>
               <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:24px;">If you have any questions — send us a message directly through the app. The 'admin team' is currently just me, Paul, in my front room in Macclesfield — but I'm very friendly and I make a great cup of tea. ☕😄</p>
-              <a href="https://nexthellow.netlify.app" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
+              <a href="https://nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
               <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong><br/><span style="font-size:12px;color:rgba(255,255,255,0.45);">Founder, Next Hello</span></p>
             </div>`
           );
