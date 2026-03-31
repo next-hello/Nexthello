@@ -2,6 +2,13 @@
   from = "/reset-password"
   to = "/reset-password.html"
   status = 200
+  force = true
+
+[[redirects]]
+  from = "/reset-password.html"
+  to = "/reset-password.html"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
