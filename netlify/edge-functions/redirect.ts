@@ -5,7 +5,7 @@ export default async (req: Request, context: Context) => {
 
   if (host === 'nexthellow.netlify.app') {
     const url = new URL(req.url)
-    url.hostname = 'nexthello.co.uk'
+    url.hostname = 'nexthello.netlify.app'
     url.protocol = 'https:'
     url.port = ''
     return Response.redirect(url.toString(), 301)
