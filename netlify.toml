@@ -1,8 +1,9 @@
-[build]
-  functions = "netlify/functions"
-  publish = "."
+[[redirects]]
+  from = "/reset-password"
+  to = "/reset-password.html"
+  status = 200
 
 [[redirects]]
-  from = "/api/claude"
-  to = "/.netlify/functions/claude"
+  from = "/*"
+  to = "/index.html"
   status = 200
