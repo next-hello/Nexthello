@@ -62,7 +62,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; h
         <p style="font-size:18px;color:#F0DDD4;margin-bottom:8px;">Hi ${toName}! 👋</p>
         <p style="font-size:15px;color:rgba(255,255,255,0.8);line-height:1.7;margin-bottom:24px;"><strong style="color:#E07A5F">${fromName}</strong> has said Hello to you on Next Hello!</p>
         <p style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:32px;">Remember — if you say Hello back, you'll both be able to chat. If you're not interested, simply don't respond. No awkwardness, ever.</p>
-        <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">View ${fromName}'s profile →</a>
+        <a href="https://nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">View ${fromName}'s profile →</a>
         <p style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:32px;line-height:1.6;">Next Hello · Because one Hello can change everything<br/>hello@nexthello.co.uk · nexthello.co.uk</p>
       </div>`
     );
@@ -77,7 +77,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; h
         <div style="font-size:32px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
         <p style="font-size:18px;color:#F0DDD4;margin-bottom:8px;">Hi ${toName}! 💬</p>
         <p style="font-size:15px;color:rgba(255,255,255,0.8);line-height:1.7;margin-bottom:24px;"><strong style="color:#E07A5F">${fromName}</strong> has sent you a new message on Next Hello!</p>
-        <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Read their message →</a>
+        <a href="https://nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Read their message →</a>
         <p style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:32px;line-height:1.6;">Next Hello · Because one Hello can change everything<br/>hello@nexthello.co.uk · nexthello.co.uk</p>
       </div>`
     );
@@ -247,7 +247,7 @@ function LoginScreen({ onBack, onSuccess }) {
     const e = resetEmail || email;
     if (!e) { setErr('Please enter your email address first.'); return; }
     setLoading(true);
-    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: 'https://app.nexthello.co.uk' });
+    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: 'https://nexthellow.netlify.app' });
     if (error) { setErr(error.message); }
     else { setResetSent(true); setErr(''); }
     setLoading(false);
@@ -363,7 +363,7 @@ function RegisterScreen({ onBack, onSuccess }) {
                 🎉 <strong style="color:#fff;">Check out Events</strong> — meet members in real life
               </p>
               <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:24px;">If you have any questions — send us a message directly through the app. The 'admin team' is currently just me, Paul, in my front room in Macclesfield — but I'm very friendly and I make a great cup of tea. ☕😄</p>
-              <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
+              <a href="https://nexthellow.netlify.app" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
               <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong><br/><span style="font-size:12px;color:rgba(255,255,255,0.45);">Founder, Next Hello</span></p>
             </div>`
           );
@@ -788,42 +788,28 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
   const [goodbyeIds, setGoodbyeIds] = useState([]);
   const [maybeIds, setMaybeIds] = useState([]);
 
-  useEffect(() => { 
+  useEffect(() => {
     if (currentUser?.id) loadExclusions();
-  }, [currentUser?.id, founderMode]);
-
-  const loadProfiles = async () => {
-    await loadProfilesWithIds(goodbyeIds, maybeIds, favourites);
-  };
+  }, [currentUser]);
 
   const loadExclusions = async () => {
-    // Load goodbyes, maybes AND sent hellos simultaneously
-    const [goodbyeRes, maybeRes, helloRes] = await Promise.all([
+    // Load both goodbyes and maybes before profiles to fix race condition
+    const [goodbyeRes, maybeRes] = await Promise.all([
       sb.from('goodbyes').select('to_user').eq('from_user', currentUser.id),
       sb.from('maybes').select('to_user').eq('from_user', currentUser.id),
-      sb.from('hellos').select('to_user').eq('from_user', currentUser.id),
     ]);
-    const gIds = goodbyeRes.data ? goodbyeRes.data.map(g => g.to_user) : [];
-    const mIds = maybeRes.data ? maybeRes.data.map(m => m.to_user) : [];
-    const hIds = helloRes.data ? helloRes.data.map(h => h.to_user) : [];
-    setGoodbyeIds(gIds);
-    setMaybeIds(mIds);
-    setFavourites(hIds);
-    // Load profiles only AFTER all exclusions are ready
-    await loadProfilesWithIds(gIds, mIds, hIds);
+    if (goodbyeRes.data) setGoodbyeIds(goodbyeRes.data.map(g => g.to_user));
+    if (maybeRes.data) setMaybeIds(maybeRes.data.map(m => m.to_user));
   };
 
-  const loadProfilesWithIds = async (gIds, mIds, hIds) => {
+  useEffect(() => { loadProfiles(); }, [founderMode, goodbyeIds, maybeIds]);
+
+  const loadProfiles = async () => {
     setLoading(true);
     const { data } = await db.getProfiles();
     if (data) {
-      let filtered = data.filter(p =>
-        p.id !== currentUser?.id &&
-        !blockedIds.includes(p.id) &&
-        !gIds.includes(p.id) &&
-        !mIds.includes(p.id) &&
-        !hIds.includes(p.id)
-      );
+      let filtered = data.filter(p => p.id !== currentUser?.id && !blockedIds.includes(p.id) && !goodbyeIds.includes(p.id) && !maybeIds.includes(p.id));
+      // God Mode: founder sees ALL profiles unfiltered
       if (!isFounder || !founderMode) {
         const myGender = (prefs?.gender || '').toLowerCase();
         const interestedIn = prefs?.interestedIn || ['Everyone'];
@@ -837,6 +823,15 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
             return false;
           });
         }
+        // Also filter by who THEY are interested in
+        filtered = filtered.filter(p => {
+          const theirInterest = p.interested_in || ['Everyone'];
+          if (theirInterest.includes('Everyone')) return true;
+          if (theirInterest.includes('Men') && (myGender === 'man' || myGender === 'male')) return true;
+          if (theirInterest.includes('Women') && (myGender === 'woman' || myGender === 'female')) return true;
+          return false;
+        });
+        // Filter out paused/deactivated profiles
         filtered = filtered.filter(p => !p.status || p.status === 'active' || p.status === null);
         if (prefs?.ageMin) filtered = filtered.filter(p => !p.age || p.age >= prefs.ageMin);
         if (prefs?.ageMax && prefs.ageMax < 85) filtered = filtered.filter(p => !p.age || p.age <= prefs.ageMax);
@@ -844,14 +839,6 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
       setProfiles(filtered);
     }
     setLoading(false);
-  };
-
-  useEffect(() => { 
-    if (currentUser?.id) loadExclusions();
-  }, [currentUser, founderMode]);
-
-  const loadProfiles = async () => {
-    await loadProfilesWithIds(goodbyeIds, maybeIds, favourites);
   };
 
   const profile = profiles[idx] || null;
@@ -975,26 +962,26 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
             <div style={{ position:"absolute", top:14, right:14, background:"rgba(0,0,0,0.4)", borderRadius:20, padding:"4px 10px" }}><span style={{ fontSize:10, color:"rgba(255,255,255,0.7)", fontFamily:sf }}>Tap for more</span></div>
           </div>
 
-          {/* Hello / Maybe / Goodbye buttons */}
+          {/* Goodbye / Maybe / Hello buttons */}
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={favourites.includes(profile?.id) ? null : sendHello} style={{ flex:1, padding:"14px", borderRadius:16, background:favourites.includes(profile?.id)?`linear-gradient(135deg,#4CAF50,#388E3C)`:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:13, fontWeight:700, cursor:favourites.includes(profile?.id)?"default":"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
-              <span>{favourites.includes(profile?.id) ? "✅" : "💕"}</span> {favourites.includes(profile?.id) ? "Sent!" : "Hello"}
+            <button onClick={sayGoodbye} style={{ flex:1, padding:"14px", borderRadius:16, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              <span>👋</span> Goodbye
             </button>
             <button onClick={sayMaybe} style={{ flex:1, padding:"14px", borderRadius:16, background:"rgba(255,193,7,0.15)", border:"1px solid rgba(255,193,7,0.4)", color:"#FFC107", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
               <span>🤔</span> Maybe
             </button>
-            <button onClick={sayGoodbye} style={{ flex:1, padding:"14px", borderRadius:16, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
-              <span>👋</span> Goodbye
+            <button onClick={favourites.includes(profile?.id) ? null : sendHello} style={{ flex:1, padding:"14px", borderRadius:16, background:favourites.includes(profile?.id)?`linear-gradient(135deg,#4CAF50,#388E3C)`:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:13, fontWeight:700, cursor:favourites.includes(profile?.id)?"default":"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              <span>{favourites.includes(profile?.id) ? "✅" : "💕"}</span> {favourites.includes(profile?.id) ? "Sent!" : "Hello"}
             </button>
           </div>
         </> : (
           <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12 }}>
             <div style={{ fontSize:36 }}>✨</div>
             <div style={{ fontSize:18, color:C.white, fontWeight:600, textAlign:"center" }}>
-              {"No more profiles to show right now."}
+              {profiles.length === 0 ? "Be the first member!" : "You've seen everyone!"}
             </div>
             <div style={{ fontSize:13, color:C.muted, fontFamily:sf, textAlign:"center", lineHeight:1.6 }}>
-              {"Tap refresh to reload, or check your Hello and Maybe lists in the Hellos tab."}
+              {profiles.length === 0 ? "Invite friends to join Next Hello." : "Check back soon for new members."}
             </div>
             <button onClick={loadProfiles} style={{ marginTop:8, padding:"10px 24px", borderRadius:20, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Refresh</button>
           </div>
@@ -1079,27 +1066,17 @@ function HellosScreen({ currentUser }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [icebreakers, setIcebreakers] = useState([]);
   const [showIce, setShowIce] = useState(false);
-  const [tab, setTab] = useState('received'); // received | matches | maybe | sent
+  const [tab, setTab] = useState('received'); // received | matches | maybe
   const [maybeProfiles, setMaybeProfiles] = useState([]);
-  const [sentHelloProfiles, setSentHelloProfiles] = useState([]);
   const bottomRef = useRef(null);
 
   useEffect(() => { 
     if (currentUser?.id) {
       loadHellos();
       loadMaybes();
-      loadSentHellos();
     }
   }, [currentUser?.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages.length]);
-
-  const loadSentHellos = async () => {
-    const { data } = await sb.from('hellos').select('to_user').eq('from_user', currentUser.id);
-    if (!data || data.length === 0) return;
-    const ids = data.map(h => h.to_user);
-    const { data: profiles } = await sb.from('profiles').select('*').in('id', ids);
-    if (profiles) setSentHelloProfiles(profiles);
-  };
 
   const loadMaybes = async () => {
     const { data } = await sb.from('maybes').select('to_user').eq('from_user', currentUser.id);
@@ -1253,9 +1230,9 @@ function HellosScreen({ currentUser }) {
         <div style={{ fontSize:24, fontWeight:700, color:C.coral }}>Hellos</div>
         {/* Tabs */}
         <div style={{ display:"flex", gap:8, marginTop:10, overflowX:"auto", scrollbarWidth:"none" }}>
-          {[['received','👋 Received'],['matches','💕 Matches'],['sent','💌 Sent'],['maybe','🤔 Maybe']].map(([id,label]) => (
+          {[['received','👋 Received'],['matches','💕 Matches'],['maybe','🤔 Maybe']].map(([id,label]) => (
             <button key={id} onClick={()=>setTab(id)} style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${tab===id?C.coral:"#DDD8D4"}`, background:tab===id?C.coralPale:C.white, color:tab===id?C.coral:C.muted, fontSize:12, fontWeight:tab===id?700:400, cursor:"pointer", fontFamily:sf, flexShrink:0 }}>
-              {label} {id==='matches' && mutualHellos.length > 0 ? `(${mutualHellos.length})` : id==='received' && hellos.length > 0 ? `(${hellos.length})` : id==='maybe' && maybeProfiles.length > 0 ? `(${maybeProfiles.length})` : id==='sent' && sentHelloProfiles.length > 0 ? `(${sentHelloProfiles.length})` : ''}
+              {label} {id==='matches' && mutualHellos.length > 0 ? `(${mutualHellos.length})` : id==='received' && hellos.length > 0 ? `(${hellos.length})` : id==='maybe' && maybeProfiles.length > 0 ? `(${maybeProfiles.length})` : ''}
             </button>
           ))}
         </div>
@@ -1263,29 +1240,6 @@ function HellosScreen({ currentUser }) {
       <div style={{ flex:1, overflow:"auto" }}>
         {loading ? (
           <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>Loading...</div>
-        ) : tab === 'sent' ? (
-          sentHelloProfiles.length === 0 ? (
-            <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>💌 No Hellos sent yet.<br/>Browse profiles and tap Hello to connect!</div>
-          ) : (
-            <div>
-              <div style={{ padding:"10px 18px", fontSize:12, color:C.muted, fontFamily:sf, background:"#FFF0EB", borderBottom:"1px solid #F0EBE8" }}>People you said Hello to — waiting for them to Hello back</div>
-              {sentHelloProfiles.map(p => {
-                const photo = p.photos?.[0] || p.photo_url;
-                const isMutualMatch = mutualHellos.some(m => m.from_user === p.id);
-                return (
-                  <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8", background:isMutualMatch?"rgba(200,97,74,0.04)":"transparent" }}>
-                    {photo ? <img src={photo} style={{ width:50, height:50, borderRadius:"50%", objectFit:"cover", border:isMutualMatch?`2px solid ${C.coral}`:"none" }} alt=""/> : <div style={{ width:50, height:50, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>👤</div>}
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:700, fontSize:15, color:C.text }}>{p.first_name}{p.age ? `, ${p.age}` : ''}</div>
-                      <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{p.location || ''}</div>
-                    </div>
-                    {isMutualMatch && <div style={{ fontSize:12, fontWeight:700, color:C.coral, fontFamily:sf }}>💕 Matched!</div>}
-                    {!isMutualMatch && <div style={{ fontSize:11, color:C.muted, fontFamily:sf }}>Awaiting Hello back</div>}
-                  </div>
-                );
-              })}
-            </div>
-          )
         ) : tab === 'maybe' ? (
           maybeProfiles.length === 0 ? (
             <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>🤔 No Maybe profiles yet.<br/>Tap Maybe when browsing to save profiles for later.</div>
