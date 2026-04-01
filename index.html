@@ -849,7 +849,9 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
     setLoading(false);
   };
 
-  useEffect(() => { loadProfiles(); }, [founderMode]);
+  useEffect(() => { 
+    if (currentUser?.id) loadExclusions();
+  }, [currentUser, founderMode]);
 
   const loadProfiles = async () => {
     await loadProfilesWithIds(goodbyeIds, maybeIds, favourites);
@@ -976,16 +978,16 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
             <div style={{ position:"absolute", top:14, right:14, background:"rgba(0,0,0,0.4)", borderRadius:20, padding:"4px 10px" }}><span style={{ fontSize:10, color:"rgba(255,255,255,0.7)", fontFamily:sf }}>Tap for more</span></div>
           </div>
 
-          {/* Goodbye / Maybe / Hello buttons */}
+          {/* Hello / Maybe / Goodbye buttons */}
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={sayGoodbye} style={{ flex:1, padding:"14px", borderRadius:16, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
-              <span>👋</span> Goodbye
+            <button onClick={favourites.includes(profile?.id) ? null : sendHello} style={{ flex:1, padding:"14px", borderRadius:16, background:favourites.includes(profile?.id)?`linear-gradient(135deg,#4CAF50,#388E3C)`:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:13, fontWeight:700, cursor:favourites.includes(profile?.id)?"default":"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              <span>{favourites.includes(profile?.id) ? "✅" : "💕"}</span> {favourites.includes(profile?.id) ? "Sent!" : "Hello"}
             </button>
             <button onClick={sayMaybe} style={{ flex:1, padding:"14px", borderRadius:16, background:"rgba(255,193,7,0.15)", border:"1px solid rgba(255,193,7,0.4)", color:"#FFC107", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
               <span>🤔</span> Maybe
             </button>
-            <button onClick={favourites.includes(profile?.id) ? null : sendHello} style={{ flex:1, padding:"14px", borderRadius:16, background:favourites.includes(profile?.id)?`linear-gradient(135deg,#4CAF50,#388E3C)`:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:13, fontWeight:700, cursor:favourites.includes(profile?.id)?"default":"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
-              <span>{favourites.includes(profile?.id) ? "✅" : "💕"}</span> {favourites.includes(profile?.id) ? "Sent!" : "Hello"}
+            <button onClick={sayGoodbye} style={{ flex:1, padding:"14px", borderRadius:16, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              <span>👋</span> Goodbye
             </button>
           </div>
         </> : (
