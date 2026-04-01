@@ -1,1 +1,2555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Next Hello</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:#0D0C0B; font-family:'Palatino Linotype',Georgia,serif; overflow-x:hidden; }
+input[type=range] { -webkit-appearance:none; appearance:none; height:4px; border-radius:4px; outline:none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:#C8614A; cursor:pointer; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
+::-webkit-scrollbar { display:none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  // Cloudinary config - loaded before React
+  window.CLOUDINARY_CLOUD = 'dr0ugumrn';
+  window.CLOUDINARY_PRESET = 'ec1w0vvi';
+  window.uploadPhoto = async (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', window.CLOUDINARY_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${window.CLOUDINARY_CLOUD}/image/upload`, { method:'POST', body:fd });
+    const data = await res.json();
+    if (data.secure_url) return data.secure_url;
+    throw new Error('Photo upload failed');
+  };
+
+  // Email notifications via Resend
+  window.RESEND_KEY = 're_9gJArjKV_Co21j7j5nehLr8eGtpR6MKU1';
+  window.sendEmail = async (to, subject, html) => {
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${window.RESEND_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'Next Hello <hello@nexthello.co.uk>',
+          to: [to],
+          subject,
+          html,
+        })
+      });
+    } catch(e) { console.log('Email notification failed:', e); }
+  };
+
+  window.notifyHello = async (toEmail, toName, fromName) => {
+    await window.sendEmail(
+      toEmail,
+      `💕 ${fromName} said Hello to you on Next Hello!`,
+      `<div style="font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+        <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
+        <div style="font-size:32px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
+        <p style="font-size:18px;color:#F0DDD4;margin-bottom:8px;">Hi ${toName}! 👋</p>
+        <p style="font-size:15px;color:rgba(255,255,255,0.8);line-height:1.7;margin-bottom:24px;"><strong style="color:#E07A5F">${fromName}</strong> has said Hello to you on Next Hello!</p>
+        <p style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:32px;">Remember — if you say Hello back, you'll both be able to chat. If you're not interested, simply don't respond. No awkwardness, ever.</p>
+        <a href="https://nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">View ${fromName}'s profile →</a>
+        <p style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:32px;line-height:1.6;">Next Hello · Because one Hello can change everything<br/>hello@nexthello.co.uk · nexthello.co.uk</p>
+      </div>`
+    );
+  };
+
+  window.notifyMessage = async (toEmail, toName, fromName) => {
+    await window.sendEmail(
+      toEmail,
+      `💬 ${fromName} sent you a message on Next Hello`,
+      `<div style="font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+        <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
+        <div style="font-size:32px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
+        <p style="font-size:18px;color:#F0DDD4;margin-bottom:8px;">Hi ${toName}! 💬</p>
+        <p style="font-size:15px;color:rgba(255,255,255,0.8);line-height:1.7;margin-bottom:24px;"><strong style="color:#E07A5F">${fromName}</strong> has sent you a new message on Next Hello!</p>
+        <a href="https://nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Read their message →</a>
+        <p style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:32px;line-height:1.6;">Next Hello · Because one Hello can change everything<br/>hello@nexthello.co.uk · nexthello.co.uk</p>
+      </div>`
+    );
+  };
+</script>
+<script type="text/babel">
+const { useState, useRef, useEffect, useCallback } = React;
+
+// Init Supabase inside babel script to ensure proper load order
+const { createClient } = window.supabase;
+const SUPABASE_URL = 'https://gmjipbdvcbmrkqaktguw.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamlwYmR2Y2JtcmtxYWt0Z3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDA4NTksImV4cCI6MjA4OTMxNjg1OX0.A71rpOJ-73_DsefhuLvbViA_wViFvASIlBO6PzQtX0w';
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const C = {
+  coral:"#C8614A", coralLight:"#E07A5F", coralPale:"#F5E6E0",
+  coralMid:"#D4775F", dark:"#1E1C1B", darkCard:"#2A2826",
+  darkBorder:"#3A3836", white:"#FAFAF8", offWhite:"#F2F0ED",
+  text:"#1E1C1B", muted:"#8A8480",
+};
+const sf = "system-ui,-apple-system,sans-serif";
+
+// ── Supabase Auth & Data helpers ──────────────────────────
+const auth = {
+  signUp: (email, password) => sb.auth.signUp({ email, password }),
+  signIn: (email, password) => sb.auth.signInWithPassword({ email, password }),
+  signOut: () => sb.auth.signOut(),
+  getUser: () => sb.auth.getUser(),
+  onAuthChange: (cb) => sb.auth.onAuthStateChange(cb),
+};
+
+const db = {
+  saveProfile: (profile) => sb.from('profiles').upsert(profile),
+  getProfiles: () => sb.from('profiles').select('*'),
+  getProfile: (id) => sb.from('profiles').select('*').eq('id', id).single(),
+  getMessages: (userId, otherId) => sb.from('messages').select('*')
+    .or(`and(sender_id.eq.${userId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${userId})`)
+    .order('created_at', { ascending: true }),
+  sendMessage: (msg) => sb.from('messages').insert(msg),
+  sendHello: async (fromUser, toUser) => {
+    return await sb.rpc('send_hello', { p_from: fromUser, p_to: toUser });
+  },
+  // Get hellos received by user — with sender profile
+  getHellosReceived: async (userId) => {
+    const { data, error } = await sb.from('hellos').select('*').eq('to_user', userId);
+    if (error) return { data: [], error };
+    if (!data || data.length === 0) return { data: [] };
+    // Fetch sender profiles separately
+    const senderIds = [...new Set(data.map(h => h.from_user))];
+    if (senderIds.length === 0) return { data: [] };
+    const { data: profiles } = await sb.from('profiles').select('*').in('id', senderIds);
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.id] = p; });
+    return { data: data.map(h => ({ ...h, sender: profileMap[h.from_user] || null })) };
+  },
+  // Get hellos sent by user
+  getHellosSent: async (userId) => {
+    const { data, error } = await sb.from('hellos').select('to_user').eq('from_user', userId);
+    return { data: data || [], error };
+  },
+  // Check if mutual hello exists
+  checkMutualHello: async (userA, userB) => {
+    const { data: a } = await sb.from('hellos').select('id').eq('from_user', userA).eq('to_user', userB);
+    const { data: b } = await sb.from('hellos').select('id').eq('from_user', userB).eq('to_user', userA);
+    return (a && a.length > 0) && (b && b.length > 0);
+  },
+  getEvents: () => sb.from('events').select('*').order('created_at', { ascending: false }),
+  createEvent: (event) => sb.from('events').insert(event),
+  // Community interests
+  getCommunityInterests: () => sb.from('custom_interests').select('interest, count').eq('approved', true).order('count', { ascending: false }),
+  submitCustomInterest: async (interest, userId) => {
+    // Upsert — if exists increment count, if new insert
+    const { data: existing } = await sb.from('custom_interests').select('id, count').eq('interest', interest).single();
+    if (existing) {
+      return sb.from('custom_interests').update({ count: existing.count + 1 }).eq('id', existing.id);
+    } else {
+      return sb.from('custom_interests').insert({ interest, submitted_by: userId, count: 1 });
+    }
+  },
+  // Soft delete / deactivate / delete account
+  pauseProfile: (userId) => sb.from('profiles').update({ status: 'paused', status_until: new Date(Date.now() + 30*24*60*60*1000).toISOString() }).eq('id', userId),
+  deactivateProfile: (userId) => sb.from('profiles').update({ status: 'deactivated' }).eq('id', userId),
+  deleteAccount: async (userId) => {
+    // Retain email in separate table before deleting
+    const { data: p } = await sb.from('profiles').select('first_name, last_name').eq('id', userId).single();
+    await sb.from('deleted_members').upsert({ user_id: userId, deleted_at: new Date().toISOString(), first_name: p?.first_name, last_name: p?.last_name });
+    await sb.from('profiles').delete().eq('id', userId);
+    await sb.auth.signOut();
+  },
+};
+
+// ── UI Helpers ────────────────────────────────────────────
+const Icon = ({ d, size=22, color="currentColor", fill="none", sw=2 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+    {Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}
+  </svg>
+);
+
+const InputField = ({ label, type="text", value, onChange, placeholder }) => (
+  <div style={{ marginBottom:14 }}>
+    {label && <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:5 }}>{label}</label>}
+    <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{ width:"100%", padding:"13px 16px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+  </div>
+);
+
+const Btn = ({ children, onClick, outline, disabled, small }) => (
+  <button onClick={onClick} disabled={disabled} style={{ width:"100%", padding:small?"10px 16px":"14px 20px", borderRadius:16, cursor:disabled?"not-allowed":"pointer", background:disabled?"#E8E4E0":outline?"transparent":`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:outline?`2px solid ${C.coral}`:"none", color:disabled?C.muted:outline?C.coral:C.white, fontSize:small?13:15, fontWeight:700, fontFamily:sf, boxShadow:(!outline&&!disabled)?`0 4px 16px rgba(200,97,74,0.35)`:"none", transition:"all 0.2s" }}>{children}</button>
+);
+
+function PhoneShell({ children, bg=C.dark }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
+      <div style={{ position:"fixed", top:8, left:8, background:"#FF0000", color:"#fff", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:4, zIndex:9999, fontFamily:"monospace" }}>BUILD: hello-fix-v3</div>
+      <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StatusBar({ light }) {
+  const [time, setTime] = useState(new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+  useEffect(()=>{ const t=setInterval(()=>setTime(new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})),10000); return()=>clearInterval(t); },[]);
+  return <div style={{ padding:"14px 24px 4px", display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600, color:light?C.text:C.white, fontFamily:sf }}><span>{time}</span><span>●●● 95%</span></div>;
+}
+
+function BottomNav({ active, setActive, darkBg, helloCount, isFounder }) {
+  const tabs = [
+    { id:"browse", label:"Browse", d:"M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" },
+    { id:"hellos", label:"Hellos", d:"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" },
+    { id:"events", label:"Events", d:["M8 2v4","M16 2v4","M3 10h18","M3 6a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"] },
+    { id:"offers", label:"Offers", d:["M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"] },
+    { id:"profile", label:"Profile", d:["M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2","M12 3a4 4 0 100 8 4 4 0 000-8z"] },
+  ];
+  if (isFounder) tabs.splice(4, 0, { id:"admin", label:"Admin", d:["M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z"] });
+  return (
+    <div style={{ background:darkBg?C.darkCard:C.white, borderTop:`1px solid ${darkBg?C.darkBorder:"#E8E4E0"}`, display:"flex", paddingBottom:16 }}>
+      {tabs.map(t=>(
+        <button key={t.id} onClick={()=>setActive(t.id)} style={{ flex:1, background:"none", border:"none", cursor:"pointer", padding:"10px 0 4px", display:"flex", flexDirection:"column", alignItems:"center", gap:3, position:"relative" }}>
+          <Icon d={t.d} size={21} color={active===t.id?(t.id==="admin"?"#FFD700":C.coral):C.muted}/>
+          {t.id==="hellos" && helloCount>0 && <div style={{ position:"absolute", top:6, right:"18%", background:C.coral, borderRadius:"50%", width:16, height:16, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, color:C.white, fontWeight:700 }}>{helloCount}</div>}
+          <span style={{ fontSize:10, fontWeight:600, color:active===t.id?(t.id==="admin"?"#FFD700":C.coral):C.muted, fontFamily:sf, letterSpacing:"0.04em" }}>{t.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Login Screen ──────────────────────────────────────────
+function LoginScreen({ onBack, onSuccess }) {
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+
+  const submit = async () => {
+    if (!email||!pass) { setErr('Please fill in all fields.'); return; }
+    setLoading(true); setErr('');
+    const { error } = await auth.signIn(email, pass);
+    if (error) { setErr(error.message); setLoading(false); }
+    else onSuccess();
+  };
+
+  const sendReset = async () => {
+    const e = resetEmail || email;
+    if (!e) { setErr('Please enter your email address first.'); return; }
+    setLoading(true);
+    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: 'https://nexthellow.netlify.app' });
+    if (error) { setErr(error.message); }
+    else { setResetSent(true); setErr(''); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"auto" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"30px 24px 26px" }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:12, padding:0 }}>←</button>
+        <div style={{ fontSize:26, fontWeight:700, color:C.white }}>Welcome back</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)", fontFamily:sf, marginTop:4 }}>Sign in to continue your journey</div>
+      </div>
+      <div style={{ padding:"28px 24px" }}>
+        <InputField label="EMAIL ADDRESS" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/>
+        <InputField label="PASSWORD" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Your password"/>
+        {err && <p style={{ color:C.coral, fontSize:13, fontFamily:sf, marginBottom:10 }}>{err}</p>}
+        {resetSent && <div style={{ background:"#E8F5E9", borderRadius:12, padding:"12px 16px", marginBottom:16 }}><p style={{ color:"#2E7D32", fontSize:13, fontFamily:sf, margin:0 }}>✅ Password reset email sent! Check your inbox.</p></div>}
+        <div style={{ textAlign:"right", marginBottom:20 }}>
+          <span onClick={sendReset} style={{ fontSize:13, color:C.coral, fontFamily:sf, cursor:"pointer" }}>Forgot password? Tap to reset</span>
+        </div>
+        <Btn onClick={submit} disabled={loading}>{loading ? "Signing in..." : "Sign In"}</Btn>
+      </div>
+    </div>
+  );
+}
+
+// ── Community Interests Hook ──────────────────────────────
+function useCommunityInterests() {
+  const [communityInterests, setCommunityInterests] = useState([]);
+  useEffect(() => {
+    db.getCommunityInterests().then(({ data }) => {
+      if (data) setCommunityInterests(data.map(d => d.interest));
+    });
+  }, []);
+  return communityInterests;
+}
+
+// ── Register Screen ───────────────────────────────────────
+const INTERESTS_GROUPED = [
+  { category:"Outdoors & Nature", items:["Walking","Hiking","Gardening","Birdwatching","Camping","Cycling","Sailing","Golf"] },
+  { category:"Food & Drink", items:["Cooking","Dining Out","Wine","Baking","Farmers Markets","Cocktails"] },
+  { category:"Arts & Culture", items:["Theatre","Cinema","Art","Painting","Photography","Opera","Classical Music","Jazz","Live Music","Literature"] },
+  { category:"Hobbies & Crafts", items:["Pottery","Crafts","Knitting","Woodworking","Writing","Crosswords","Bridge","Chess"] },
+  { category:"Health & Wellbeing", items:["Yoga","Pilates","Meditation","Swimming","Dancing","Gym","Mindfulness"] },
+  { category:"Lifestyle & Social", items:["Travel","Fashion","Volunteering","Grandchildren","Dogs","Cats","Cars","Antiques","History"] },
+  { category:"Learning & Media", items:["Reading","Podcasts","Radio","Languages","Philosophy","Astronomy","Technology"] },
+  { category:"Sport", items:["Cricket","Football","Rugby","Tennis","Bowls","Rowing","Motor Sport"] },
+];
+
+function RegisterScreen({ onBack, onSuccess }) {
+  const [step, setStep] = useState(1); const TOTAL = 6;
+  const [d, setD] = useState({ firstName:"", lastName:"", email:"", password:"", dob:"", gender:"", interestedIn:[], ageMin:50, ageMax:75, location:"", bio:"", interests:[], customInterest:"" });
+  const [loading, setLoading] = useState(false);
+  const communityInterests = useCommunityInterests();
+  const [err, setErr] = useState('');
+  const set = (k,v) => setD(p=>({...p,[k]:v}));
+  const toggleArr = (k,v) => set(k, d[k].includes(v)?d[k].filter(x=>x!==v):[...d[k],v]);
+  const progress = (step/TOTAL)*100;
+  const titles = ["Your details","About you","Your location","Your story","Your interests","Almost done!"];
+  const subs = ["Let's start with the basics","Help us match you better","So we can show nearby members","Write a short bio","Pick at least 3 interests","Create your account"];
+  const valid = () => {
+    if(step===1) return d.firstName&&d.lastName&&d.email&&d.password.length>=8;
+    if(step===2) return d.dob&&d.gender&&d.interestedIn.length>0;
+    if(step===3) return d.location;
+    if(step===4) return d.bio.length>=20;
+    if(step===5) return d.interests.length>=3;
+    if(step===6) return true;
+    return true;
+  };
+  const chip = (label, active, onClick) => <button key={label} onClick={onClick} style={{ padding:"8px 14px", borderRadius:22, cursor:"pointer", border:`1.5px solid ${active?C.coral:"#DDD8D4"}`, background:active?C.coralPale:C.white, color:active?C.coral:C.muted, fontSize:12, fontWeight:active?600:400, fontFamily:sf, marginBottom:6 }}>{label}</button>;
+
+  const createAccount = async () => {
+    setLoading(true); setErr('');
+    const isFoundingMember = new Date() < new Date('2026-06-01');
+    try {
+      const { data, error } = await auth.signUp(d.email, d.password);
+      if (error) { setErr(error.message); setLoading(false); return; }
+
+      const userId = data.user?.id || data.session?.user?.id;
+
+      if (userId) {
+        const profileData = {
+          id: userId,
+          first_name: d.firstName, last_name: d.lastName,
+          age: new Date().getFullYear() - new Date(d.dob).getFullYear(),
+          gender: d.gender, interested_in: d.interestedIn,
+          age_min: d.ageMin, age_max: d.ageMax,
+          location: d.location, bio: d.bio, interests: d.interests,
+          verified: false,
+          founding_member: isFoundingMember,
+        };
+        const { error: profileError } = await db.saveProfile(profileData);
+        if (profileError) {
+          localStorage.setItem('nh_pending_profile', JSON.stringify(profileData));
+        }
+        // Send welcome email
+        try {
+          await window.sendEmail(
+            d.email,
+            `Welcome to Next Hello, ${d.firstName}! 💕`,
+            `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+              <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
+              <div style="font-size:36px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
+              <p style="font-size:19px;color:#F0DDD4;margin-bottom:6px;">Hi ${d.firstName}! 👋</p>
+              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">Welcome to Next Hello — and congratulations on being one of our very first members! 🎉</p>
+              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">I'm Paul, the founder. Not a faceless corporation with a ping pong table and a juice bar. Just someone who got fed up with expensive, impersonal dating sites and decided to do something about it.</p>
+              ${isFoundingMember ? `<div style="background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);border-radius:12px;padding:14px 18px;margin-bottom:16px;"><p style="font-size:14px;color:#FFD700;margin:0;line-height:1.7;">👑 <strong>You're a VIP Founding Member</strong> — Next Hello is completely free for you for a full 12 months. Not bad for a few minutes of your time!</p></div>` : ''}
+              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">A couple of things to get you started:</strong></p>
+              <p style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.8;margin-bottom:16px;">
+                📸 <strong style="color:#fff;">Add a great photo</strong> — smiling ones get the most Hellos. Not your car, not your cat. We have standards. 😄<br/>
+                💕 <strong style="color:#fff;">Browse and say Hello</strong> to anyone who catches your eye — and yes, we know for now you may be mostly saying Hello to yourself until we grow. Bear with us, great things take a little time! 😄<br/>
+                👋 <strong style="color:#fff;">Not interested?</strong> Just say Goodbye — they'll never know<br/>
+                🎉 <strong style="color:#fff;">Check out Events</strong> — meet members in real life
+              </p>
+              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:24px;">If you have any questions — send us a message directly through the app. The 'admin team' is currently just me, Paul, in my front room in Macclesfield — but I'm very friendly and I make a great cup of tea. ☕😄</p>
+              <a href="https://nexthellow.netlify.app" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
+              <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong><br/><span style="font-size:12px;color:rgba(255,255,255,0.45);">Founder, Next Hello</span></p>
+            </div>`
+          );
+        } catch(emailErr) { console.log('Welcome email failed:', emailErr); }
+      } else {
+        const profileData = {
+          first_name: d.firstName, last_name: d.lastName,
+          age: new Date().getFullYear() - new Date(d.dob).getFullYear(),
+          gender: d.gender, interested_in: d.interestedIn,
+          age_min: d.ageMin, age_max: d.ageMax,
+          location: d.location, bio: d.bio, interests: d.interests,
+          verified: false,
+          founding_member: isFoundingMember,
+        };
+        localStorage.setItem('nh_pending_profile', JSON.stringify(profileData));
+        setErr('✅ Account created! Please check your email to confirm your account, then sign in.');
+        setLoading(false);
+        setTimeout(() => onSuccess(), 3000);
+        return;
+      }
+      onSuccess();
+    } catch(e) { setErr(e.message || 'Something went wrong. Please try again.'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"28px 24px 20px", flexShrink:0 }}>
+        <button onClick={()=>step>1?setStep(s=>s-1):onBack()} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:10, padding:0 }}>←</button>
+        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+          <div style={{ fontSize:20, fontWeight:700, color:C.white }}>{titles[step-1]}</div>
+          <span style={{ fontSize:12, color:"rgba(255,255,255,0.7)", fontFamily:sf }}>Step {step} of {TOTAL}</span>
+        </div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)", fontFamily:sf, marginBottom:12 }}>{subs[step-1]}</div>
+        <div style={{ height:4, background:"rgba(255,255,255,0.25)", borderRadius:4 }}>
+          <div style={{ height:"100%", width:`${progress}%`, background:C.white, borderRadius:4, transition:"width 0.3s" }}/>
+        </div>
+      </div>
+
+      <div style={{ flex:1, overflow:"auto", padding:"22px 24px 100px" }}>
+        {step===1 && <>
+          <InputField label="FIRST NAME" value={d.firstName} onChange={e=>set("firstName",e.target.value)} placeholder="e.g. Margaret"/>
+          <InputField label="LAST NAME" value={d.lastName} onChange={e=>set("lastName",e.target.value)} placeholder="e.g. Thompson"/>
+          <InputField label="EMAIL ADDRESS" type="email" value={d.email} onChange={e=>set("email",e.target.value)} placeholder="you@example.com"/>
+          <InputField label="PASSWORD (min. 8 characters)" type="password" value={d.password} onChange={e=>set("password",e.target.value)} placeholder="Choose a secure password"/>
+          <div style={{ background:C.coralPale, borderRadius:12, padding:"10px 14px" }}><p style={{ fontSize:12, color:C.coral, fontFamily:sf, margin:0, lineHeight:1.6 }}>🔒 Next Hello is exclusively for members aged 50+.</p></div>
+        </>}
+
+        {step===2 && <>
+          <InputField label="DATE OF BIRTH" type="date" value={d.dob} onChange={e=>set("dob",e.target.value)}/>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>I AM A</label>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>{["Man","Woman","Non-binary","Prefer not to say"].map(g=>chip(g,d.gender===g,()=>set("gender",g)))}</div>
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>INTERESTED IN MEETING</label>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>{["Men","Women","Everyone"].map(g=>chip(g,d.interestedIn.includes(g),()=>toggleArr("interestedIn",g)))}</div>
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:10 }}>SHOW ME PEOPLE AGED</label>
+            <div style={{ background:C.coralPale, borderRadius:16, padding:"16px 18px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16 }}>
+                <div style={{ textAlign:"center" }}><div style={{ fontSize:26, fontWeight:700, color:C.coral }}>{d.ageMin}</div><div style={{ fontSize:10, color:C.muted, fontFamily:sf }}>MIN</div></div>
+                <div style={{ textAlign:"center" }}><div style={{ fontSize:26, fontWeight:700, color:C.coral }}>{d.ageMax>=85?"85+":d.ageMax}</div><div style={{ fontSize:10, color:C.muted, fontFamily:sf }}>MAX</div></div>
+              </div>
+              <div style={{ marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span style={{ fontSize:10, color:C.muted, fontFamily:sf }}>Minimum</span><span style={{ fontSize:10, fontWeight:600, color:C.coral, fontFamily:sf }}>{d.ageMin}</span></div>
+                <input type="range" min={50} max={83} value={d.ageMin} onChange={e=>set("ageMin",Math.min(+e.target.value,d.ageMax-2))} style={{ width:"100%", accentColor:C.coral }}/>
+              </div>
+              <div>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span style={{ fontSize:10, color:C.muted, fontFamily:sf }}>Maximum</span><span style={{ fontSize:10, fontWeight:600, color:C.coral, fontFamily:sf }}>{d.ageMax>=85?"85+":d.ageMax}</span></div>
+                <input type="range" min={52} max={85} value={d.ageMax} onChange={e=>set("ageMax",Math.max(+e.target.value,d.ageMin+2))} style={{ width:"100%", accentColor:C.coral }}/>
+              </div>
+            </div>
+          </div>
+        </>}
+
+        {step===3 && <>
+          <InputField label="YOUR TOWN OR CITY" value={d.location} onChange={e=>set("location",e.target.value)} placeholder="e.g. London, UK"/>
+          <div style={{ background:C.coralPale, borderRadius:14, padding:"12px 14px" }}><p style={{ fontSize:12, color:C.coral, fontFamily:sf, margin:0, lineHeight:1.6 }}>📍 We use your location to show you members nearby. It's never shared publicly.</p></div>
+        </>}
+
+        {step===4 && <>
+          <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:6 }}>ABOUT YOU</label>
+          <textarea value={d.bio} onChange={e=>set("bio",e.target.value)} rows={6} placeholder="Tell potential matches about yourself — your passions, what you're looking for, what makes you laugh..." style={{ width:"100%", padding:"14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.65 }}/>
+          <div style={{ textAlign:"right", fontSize:11, color:d.bio.length<20?C.coral:C.muted, fontFamily:sf, marginTop:4 }}>{d.bio.length} chars {d.bio.length<20?"(min. 20)":""}</div>
+        </>}
+
+        {step===5 && <>
+          <p style={{ fontSize:13, color:C.muted, fontFamily:sf, marginBottom:4 }}>Select as many as you like!</p>
+          <p style={{ fontSize:12, color:C.coral, fontFamily:sf, marginBottom:14 }}>{d.interests.length} selected</p>
+          {INTERESTS_GROUPED.map(group=>(
+            <div key={group.category} style={{ marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.coral, letterSpacing:"0.1em", fontFamily:sf, marginBottom:8 }}>{group.category.toUpperCase()}</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{group.items.map(t=>chip(t,d.interests.includes(t),()=>toggleArr("interests",t)))}</div>
+            </div>
+          ))}
+          {/* Community-submitted interests */}
+          {communityInterests.filter(ci => !INTERESTS_GROUPED.flatMap(g=>g.items).includes(ci)).length > 0 && (
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.coral, letterSpacing:"0.1em", fontFamily:sf, marginBottom:8 }}>✨ ADDED BY MEMBERS</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {communityInterests.filter(ci => !INTERESTS_GROUPED.flatMap(g=>g.items).includes(ci)).map(t=>chip(t,d.interests.includes(t),()=>toggleArr("interests",t)))}
+              </div>
+            </div>
+          )}
+          <div style={{ background:C.offWhite, borderRadius:14, padding:"12px 14px" }}>
+            <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>ADD YOUR OWN</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <input
+                id="custom-interest-input"
+                value={d.customInterest}
+                onChange={e=>set("customInterest",e.target.value)}
+                onKeyDown={e=>{
+                  if(e.key==="Enter" && e.target.value.trim()) {
+                    const t = e.target.value.trim();
+                    setD(prev => ({
+                      ...prev,
+                      interests: prev.interests.includes(t) ? prev.interests : [...prev.interests, t],
+                      customInterest: ""
+                    }));
+                    db.submitCustomInterest(t, null);
+                  }
+                }}
+                placeholder="e.g. Beekeeping..." style={{ flex:1, padding:"10px 14px", borderRadius:22, border:"1.5px solid #DDD8D4", outline:"none", fontSize:13, background:C.white, fontFamily:sf }}/>
+              <button onClick={()=>{
+                const input = document.getElementById('custom-interest-input');
+                const t = input ? input.value.trim() : d.customInterest.trim();
+                if(t) {
+                  setD(prev => ({
+                    ...prev,
+                    interests: prev.interests.includes(t) ? prev.interests : [...prev.interests, t],
+                    customInterest: ""
+                  }));
+                  db.submitCustomInterest(t, null);
+                }
+              }} style={{ padding:"10px 16px", borderRadius:22, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Add</button>
+            </div>
+            <p style={{ fontSize:11, color:C.muted, fontFamily:sf, marginTop:8, lineHeight:1.5 }}>✨ Your custom interests are shared with the community so others can discover them too!</p>
+          </div>
+        </>}
+
+        {step===6 && <>
+          <div style={{ background:C.offWhite, borderRadius:16, padding:16, marginBottom:14 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:10 }}>YOUR PROFILE SUMMARY</div>
+            {[["Name",`${d.firstName} ${d.lastName}`],["Email",d.email],["Gender",d.gender||"—"],["Interested in",d.interestedIn.join(", ")||"—"],["Location",d.location||"—"],["Age range",`${d.ageMin} – ${d.ageMax>=85?"85+":d.ageMax}`],["Interests",d.interests.slice(0,3).join(", ")+(d.interests.length>3?` +${d.interests.length-3} more`:"")||"—"]].map(([k,v])=>(
+              <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"7px 0", borderBottom:"1px solid #E8E4E0" }}>
+                <span style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{k}</span>
+                <span style={{ fontSize:12, fontWeight:600, color:C.text, fontFamily:sf, maxWidth:"55%", textAlign:"right" }}>{v}</span>
+              </div>
+            ))}
+          </div>
+          {err && <p style={{ color:C.coral, fontSize:13, fontFamily:sf, marginBottom:10 }}>{err}</p>}
+          <div style={{ background:C.coralPale, borderRadius:14, padding:"10px 14px", marginBottom:14 }}><p style={{ fontSize:12, color:C.coral, fontFamily:sf, margin:0, lineHeight:1.6 }}>🔒 By creating your account you agree to our Terms of Service. You confirm you are aged 50 or over.</p></div>
+        </>}
+      </div>
+
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"12px 24px 28px", background:C.white, borderTop:"1px solid #EAE6E2" }}>
+        <Btn onClick={step<TOTAL?()=>setStep(s=>s+1):createAccount} disabled={!valid()||loading}>
+          {loading?"Creating your profile...":(step===TOTAL?"Create My Profile →":"Continue →")}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+// ── Splash Screen ─────────────────────────────────────────
+function SplashScreen({ onLogin, onRegister }) {
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:`linear-gradient(160deg,#1E1C1B 0%,#2A2826 55%,#3a2820 100%)`, padding:"44px 28px 50px", justifyContent:"space-between" }}>
+      <div>
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+          <NHLogo size={46}/>
+          <div>
+            <div style={{ fontSize:11, letterSpacing:"0.22em", color:C.coral, fontWeight:600 }}>N E X T</div>
+            <div style={{ fontSize:28, fontWeight:700, color:C.white, lineHeight:1 }}>Hello</div>
+          </div>
+        </div>
+        <div style={{ fontSize:10, letterSpacing:"0.16em", color:C.coralLight }}>BECAUSE ONE HELLO CAN CHANGE EVERYTHING</div>
+      </div>
+      <div>
+        <div style={{ fontSize:36, fontWeight:700, color:C.white, lineHeight:1.25, marginBottom:16 }}>Find meaningful<br/>connections<br/><span style={{ color:C.coralLight }}>after 50.</span></div>
+        <p style={{ fontSize:15, color:"rgba(255,255,255,0.6)", lineHeight:1.65, fontFamily:sf, margin:0 }}>A warm, safe space to meet people who share your values, interests, and appreciation for life's finer things.</p>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        <button onClick={onRegister} style={{ width:"100%", padding:"15px", borderRadius:16, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:sf }}>Create My Profile</button>
+        <button onClick={onLogin} style={{ width:"100%", padding:"15px", borderRadius:16, background:"transparent", border:`2px solid ${C.coral}`, color:C.coral, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:sf }}>Sign In</button>
+        <p style={{ textAlign:"center", fontSize:11, color:"rgba(255,255,255,0.3)", fontFamily:sf, margin:0, lineHeight:1.6 }}>By continuing you agree to our Terms of Service and Privacy Policy</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Report & Block Modal ──────────────────────────────────
+function ReportBlockModal({ profile, currentUser, onClose, onBlocked }) {
+  const [view, setView] = useState('menu'); // menu | report | blocked | reported
+  const [reason, setReason] = useState('');
+  const [details, setDetails] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const REASONS = [
+    'Fake or misleading profile',
+    'Abusive or offensive messages',
+    'Suspected romance scammer',
+    'Inappropriate photos',
+    'Harassment or unwanted contact',
+    'Made me feel unsafe',
+    'Other',
+  ];
+
+  const handleBlock = async () => {
+    setSubmitting(true);
+    try {
+      await sb.from('blocked_members').upsert({
+        blocker_id: currentUser.id,
+        blocked_id: profile.id,
+      });
+      setView('blocked');
+      onBlocked && onBlocked(profile.id);
+    } catch(e) { alert('Could not block. Please try again.'); }
+    setSubmitting(false);
+  };
+
+  const handleReport = async () => {
+    if (!reason) { alert('Please select a reason.'); return; }
+    setSubmitting(true);
+    try {
+      await sb.from('reports').insert({
+        reporter_id: currentUser.id,
+        reported_id: profile.id,
+        reason,
+        details,
+        status: 'pending',
+      });
+      setView('reported');
+    } catch(e) { alert('Could not submit report. Please try again.'); }
+    setSubmitting(false);
+  };
+
+  return (
+    <div onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:999 }}>
+      <div style={{ background:C.white, borderRadius:'22px 22px 0 0', width:'100%', maxWidth:390, padding:'20px 22px 40px', fontFamily:sf }}>
+        <div style={{ width:40, height:4, background:'#DDD', borderRadius:2, margin:'0 auto 20px' }}/>
+
+        {view === 'menu' && <>
+          <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:4 }}>
+            {profile.first_name}'s Profile
+          </div>
+          <div style={{ fontSize:13, color:C.muted, marginBottom:20 }}>What would you like to do?</div>
+          <button onClick={()=>setView('report')} style={{ width:'100%', padding:'14px', borderRadius:14, background:'#FFF3E0', border:'1.5px solid #FFB74D', color:'#E65100', fontSize:14, fontWeight:700, cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{fontSize:20}}>🚩</span> Report {profile.first_name}
+          </button>
+          <button onClick={handleBlock} disabled={submitting} style={{ width:'100%', padding:'14px', borderRadius:14, background:'#FFEBEE', border:'1.5px solid #EF9A9A', color:'#C62828', fontSize:14, fontWeight:700, cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{fontSize:20}}>🚫</span> Block {profile.first_name}
+          </button>
+          <button onClick={onClose} style={{ width:'100%', padding:'12px', borderRadius:14, background:'none', border:'none', color:C.muted, fontSize:13, cursor:'pointer' }}>Cancel</button>
+        </>}
+
+        {view === 'report' && <>
+          <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:4 }}>Report {profile.first_name}</div>
+          <div style={{ fontSize:13, color:C.muted, marginBottom:16 }}>Your report goes directly to the Next Hello founder. All reports are confidential.</div>
+          <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:'0.08em', marginBottom:8 }}>REASON *</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14 }}>
+            {REASONS.map(r => (
+              <button key={r} onClick={()=>setReason(r)} style={{ padding:'10px 14px', borderRadius:12, border:`1.5px solid ${reason===r?C.coral:'#DDD8D4'}`, background:reason===r?C.coralPale:C.white, color:reason===r?C.coral:C.text, fontSize:13, fontWeight:reason===r?700:400, cursor:'pointer', textAlign:'left' }}>
+                {reason===r?'✓ ':''}{r}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:'0.08em', marginBottom:6 }}>ADDITIONAL DETAILS (optional)</div>
+          <textarea value={details} onChange={e=>setDetails(e.target.value)} rows={3} placeholder="Tell us more about what happened..." style={{ width:'100%', padding:'10px 14px', borderRadius:12, border:'1.5px solid #DDD8D4', outline:'none', resize:'none', fontSize:13, background:C.offWhite, marginBottom:14, boxSizing:'border-box', fontFamily:sf }}/>
+          <button onClick={handleReport} disabled={!reason||submitting} style={{ width:'100%', padding:'14px', borderRadius:14, background:!reason?'#EEE':`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:'none', color:!reason?C.muted:C.white, fontSize:14, fontWeight:700, cursor:!reason?'not-allowed':'pointer', marginBottom:8 }}>
+            {submitting?'Submitting...':'Submit Report'}
+          </button>
+          <button onClick={()=>setView('menu')} style={{ width:'100%', padding:'10px', borderRadius:14, background:'none', border:'none', color:C.muted, fontSize:13, cursor:'pointer' }}>Back</button>
+        </>}
+
+        {view === 'blocked' && <>
+          <div style={{ textAlign:'center', padding:'20px 0' }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>🚫</div>
+            <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:8 }}>{profile.first_name} has been blocked</div>
+            <p style={{ fontSize:13, color:C.muted, lineHeight:1.6, marginBottom:20 }}>{profile.first_name} can no longer see your profile, send you Hellos, or message you. They will never be told you blocked them.</p>
+            <button onClick={onClose} style={{ width:'100%', padding:'14px', borderRadius:14, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:'none', color:C.white, fontSize:14, fontWeight:700, cursor:'pointer' }}>Done</button>
+          </div>
+        </>}
+
+        {view === 'reported' && <>
+          <div style={{ textAlign:'center', padding:'20px 0' }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>🙏</div>
+            <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:8 }}>Report received</div>
+            <p style={{ fontSize:13, color:C.muted, lineHeight:1.6, marginBottom:20 }}>Thank you for keeping Next Hello safe. Your report has been sent directly to our founder and will be reviewed within 24 hours. Your identity is completely confidential.</p>
+            <button onClick={onClose} style={{ width:'100%', padding:'14px', borderRadius:14, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:'none', color:C.white, fontSize:14, fontWeight:700, cursor:'pointer' }}>Done</button>
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+
+function NHLogo({ size=36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Oval speech bubble outline style — filled coral */}
+      <ellipse cx="20" cy="18" rx="18" ry="14" fill="#C8614A"/>
+      {/* Tail bottom-right */}
+      <path d="M28 28 L36 38 L22 30 Z" fill="#C8614A"/>
+      {/* Three white dots */}
+      <circle cx="12" cy="18" r="2.4" fill="white"/>
+      <circle cx="20" cy="18" r="2.4" fill="white"/>
+      <circle cx="28" cy="18" r="2.4" fill="white"/>
+    </svg>
+  );
+}
+
+// ── Welcome / Onboarding Screens ──────────────────────────
+const ONBOARDING_SLIDES = [
+  {
+    emoji: null,
+    svg: true,
+    title: "Welcome to Next Hello",
+    subtitle: "Because one Hello can change everything",
+    body: "Next Hello is a warm, safe dating community built exclusively for the over 50s. No algorithms. No swiping frenzy. Just real people looking for genuine connection.",
+    bg: `linear-gradient(160deg,#1E1C1B 0%,#2A2826 55%,#3a2820 100%)`,
+    light: false,
+  },
+  {
+    emoji: "👋",
+    title: "Say Hello",
+    subtitle: "When someone catches your eye",
+    body: "Browse member profiles at your own pace. When you'd like to connect, simply tap Hello — it adds them to your favourites and lets them know you're interested.",
+    bg: `linear-gradient(160deg,${C.coral} 0%,${C.coralMid} 100%)`,
+    light: false,
+  },
+  {
+    emoji: "👋",
+    title: "Say Goodbye",
+    subtitle: "No hard feelings, ever",
+    body: "Not quite right? Tap Goodbye to move on gracefully. You can always go back if you change your mind — and nobody ever knows you passed.",
+    bg: `linear-gradient(160deg,#2A2826 0%,#1E1C1B 100%)`,
+    light: false,
+  },
+  {
+    emoji: "💬",
+    title: "Start a Conversation",
+    subtitle: "Only when you both say Hello",
+    body: "Conversations only open when both of you have said Hello to each other. If someone says Hello to you and you're not interested — simply don't respond. No awkwardness, no explanation needed. ✨ Stuck for what to say? Our AI icebreaker suggests the perfect opening line.",
+    bg: `linear-gradient(160deg,${C.coral} 0%,#BF360C 100%)`,
+    light: false,
+  },
+  {
+    emoji: "🎉",
+    title: "Meet at Events",
+    subtitle: "Real life, real connections",
+    body: "Members organise events — afternoon teas, walks, evenings out. Browse what's on near you, or create your own. The best connections happen face to face.",
+    bg: `linear-gradient(160deg,#1E1C1B 0%,#2A2826 100%)`,
+    light: false,
+  },
+];
+
+function OnboardingScreens({ onDone, ctaText }) {
+  const [slide, setSlide] = useState(0);
+  const s = ONBOARDING_SLIDES[slide];
+  const isLast = slide === ONBOARDING_SLIDES.length - 1;
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:s.bg, padding:"44px 28px 48px", justifyContent:"space-between", transition:"background 0.4s" }}>
+      {/* Skip */}
+      <div style={{ display:"flex", justifyContent:"flex-end" }}>
+        <button onClick={onDone} style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.7)", fontSize:12, cursor:"pointer", fontFamily:sf }}>Skip</button>
+      </div>
+
+      {/* Content */}
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:16 }}>
+        {s.svg ? (
+          <div style={{ width:80, height:80, borderRadius:"50%", border:`2px solid ${C.coral}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <NHLogo size={50}/>
+          </div>
+        ) : (
+          <div style={{ fontSize:72 }}>{s.emoji}</div>
+        )}
+        <div>
+          <div style={{ fontSize:28, fontWeight:700, color:C.white, lineHeight:1.2, marginBottom:8 }}>
+            {slide === 0 ? <>Welcome to your<br/><span style={{color:C.coralLight}}>'Next Hello'</span></> : s.title}
+          </div>
+          <div style={{ fontSize:14, color:C.coralLight, fontFamily:sf, marginBottom:16, fontWeight:600 }}>{s.subtitle}</div>
+          <p style={{ fontSize:15, color:"rgba(255,255,255,0.75)", lineHeight:1.7, fontFamily:sf, margin:0 }}>{s.body}</p>
+        </div>
+      </div>
+
+      {/* Dots + Button */}
+      <div style={{ display:"flex", flexDirection:"column", gap:20, alignItems:"center" }}>
+        <div style={{ display:"flex", gap:8 }}>
+          {ONBOARDING_SLIDES.map((_,i) => (
+            <div key={i} onClick={()=>setSlide(i)} style={{ width:i===slide?24:8, height:8, borderRadius:4, background:i===slide?C.coral:"rgba(255,255,255,0.25)", transition:"width 0.3s", cursor:"pointer" }}/>
+          ))}
+        </div>
+        <button onClick={isLast ? onDone : ()=>setSlide(s=>s+1)} style={{ width:"100%", padding:"15px", borderRadius:16, background:isLast?`linear-gradient(135deg,${C.coral},${C.coralMid})`:"rgba(255,255,255,0.15)", border:isLast?"none":"1.5px solid rgba(255,255,255,0.3)", color:C.white, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:sf }}>
+          {isLast ? (ctaText || "Create a new profile or Login →") : "Next →"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Browse Screen ─────────────────────────────────────────
+const FOUNDER_EMAIL = 'pbhalfpenny@icloud.com';
+const isGodMode = (user) => user?.email === FOUNDER_EMAIL;
+
+function BrowseScreen({ currentUser, prefs, onSendHello }) {
+  const [profiles, setProfiles] = useState([]);
+  const [idx, setIdx] = useState(0);
+  const [showDetail, setShowDetail] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [favourites, setFavourites] = useState([]);
+  const [founderMode, setFounderMode] = useState(true); // God Mode ON by default for founder
+  const [showReportBlock, setShowReportBlock] = useState(false);
+  const [blockedIds, setBlockedIds] = useState([]);
+  const isFounder = isGodMode(currentUser);
+
+  const [goodbyeIds, setGoodbyeIds] = useState([]);
+  const [maybeIds, setMaybeIds] = useState([]);
+
+  useEffect(() => { 
+    if (currentUser?.id) loadExclusions();
+  }, [currentUser?.id, founderMode]);
+
+  const loadProfiles = async () => {
+    await loadProfilesWithIds(goodbyeIds, maybeIds, favourites);
+  };
+
+  const loadExclusions = async () => {
+    // Load goodbyes, maybes AND sent hellos simultaneously
+    const [goodbyeRes, maybeRes, helloRes] = await Promise.all([
+      sb.from('goodbyes').select('to_user').eq('from_user', currentUser.id),
+      sb.from('maybes').select('to_user').eq('from_user', currentUser.id),
+      sb.from('hellos').select('to_user').eq('from_user', currentUser.id),
+    ]);
+    const gIds = goodbyeRes.data ? goodbyeRes.data.map(g => g.to_user) : [];
+    const mIds = maybeRes.data ? maybeRes.data.map(m => m.to_user) : [];
+    const hIds = helloRes.data ? helloRes.data.map(h => h.to_user) : [];
+    setGoodbyeIds(gIds);
+    setMaybeIds(mIds);
+    setFavourites(hIds);
+    // Load profiles only AFTER all exclusions are ready
+    await loadProfilesWithIds(gIds, mIds, hIds);
+  };
+
+  const loadProfilesWithIds = async (gIds, mIds, hIds) => {
+    setLoading(true);
+    const { data } = await db.getProfiles();
+    if (data) {
+      let filtered = data.filter(p =>
+        p.id !== currentUser?.id &&
+        !blockedIds.includes(p.id) &&
+        !gIds.includes(p.id) &&
+        !mIds.includes(p.id) &&
+        !hIds.includes(p.id)
+      );
+      if (!isFounder || !founderMode) {
+        const myGender = (prefs?.gender || '').toLowerCase();
+        const interestedIn = prefs?.interestedIn || ['Everyone'];
+        const wantsEveryone = interestedIn.includes('Everyone') || interestedIn.length === 0;
+        if (!wantsEveryone) {
+          filtered = filtered.filter(p => {
+            const g = (p.gender || '').toLowerCase();
+            if (interestedIn.includes('Women') && (g === 'woman' || g === 'female')) return true;
+            if (interestedIn.includes('Men') && (g === 'man' || g === 'male')) return true;
+            if (interestedIn.includes('Everyone')) return true;
+            return false;
+          });
+        }
+        filtered = filtered.filter(p => !p.status || p.status === 'active' || p.status === null);
+        if (prefs?.ageMin) filtered = filtered.filter(p => !p.age || p.age >= prefs.ageMin);
+        if (prefs?.ageMax && prefs.ageMax < 85) filtered = filtered.filter(p => !p.age || p.age <= prefs.ageMax);
+      }
+      setProfiles(filtered);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { 
+    if (currentUser?.id) loadExclusions();
+  }, [currentUser, founderMode]);
+
+  const loadProfiles = async () => {
+    await loadProfilesWithIds(goodbyeIds, maybeIds, favourites);
+  };
+
+  const profile = profiles[idx] || null;
+  const myInterests = prefs?.interests || [];
+  const sharedTags = profile ? (profile.interests || []).filter(t => myInterests.includes(t)) : [];
+
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 2200); };
+
+  const sendHello = async () => {
+    if (!profile || !currentUser) return;
+    const { error: helloError } = await db.sendHello(currentUser.id, profile.id);
+    if (helloError) {
+      console.error('sendHello FAILED:', helloError.message, helloError.code, helloError.details);
+      showToast(`Hello failed — please try again`);
+      return;
+    }
+    console.log('sendHello SUCCESS — from:', currentUser.id, 'to:', profile.id);
+    if (!favourites.includes(profile.id)) setFavourites(f => [...f, profile.id]);
+    onSendHello && onSendHello(profile);
+    // Send email notification to the person receiving the Hello
+    try {
+      const { data: myProfile } = await db.getProfile(currentUser.id);
+      if (profile.email && myProfile) {
+        await window.notifyHello(profile.email, profile.first_name, myProfile.first_name);
+      }
+    } catch(e) { console.log('Hello notification failed:', e); }
+    showToast(`Hello sent to ${profile.first_name}! 💕`);
+    setTimeout(() => setIdx(i => i+1), 500);
+  };
+
+  const sayGoodbye = async () => {
+    if (profile && currentUser) {
+      const newGoodbyes = [...goodbyeIds, profile.id];
+      setGoodbyeIds(newGoodbyes);
+      try {
+        await sb.from('goodbyes').upsert({ from_user: currentUser.id, to_user: profile.id });
+      } catch(e) { console.log('Goodbye save failed:', e); }
+    }
+    showToast(`Goodbye 👋`);
+    setIdx(i => i+1);
+  };
+  const sayMaybe = async () => {
+    if (profile && currentUser) {
+      const newMaybes = [...maybeIds, profile.id];
+      setMaybeIds(newMaybes);
+      try {
+        await sb.from('maybes').upsert({ from_user: currentUser.id, to_user: profile.id });
+      } catch(e) { console.log('Maybe save failed:', e); }
+    }
+    showToast(`Saved for later 🤔`);
+    setIdx(i => i+1);
+  };
+  const goBack = () => { if (idx > 0) { setIdx(i => i-1); showToast("Going back ←"); } };
+
+  const deleteProfile = async (p) => {
+    if (!window.confirm(`Delete ${p.first_name}'s profile? This cannot be undone.`)) return;
+    await sb.from('profiles').delete().eq('id', p.id);
+    await loadProfiles();
+    showToast(`${p.first_name}'s profile deleted`);
+  };
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.dark, overflow:"hidden" }}>
+      {/* Header */}
+      <div style={{ padding:"8px 20px 10px", borderBottom:`1px solid ${C.darkBorder}` }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <NHLogo size={36}/>
+            <div>
+              <div style={{ fontSize:10, letterSpacing:"0.2em", color:C.coral, fontWeight:600 }}>N E X T</div>
+              <div style={{ fontSize:20, fontWeight:700, color:C.white, lineHeight:1 }}>Hello</div>
+            </div>
+          </div>
+          {isFounder && (
+            <button onClick={()=>setFounderMode(f=>!f)} style={{ background:founderMode?"rgba(255,215,0,0.25)":"rgba(255,255,255,0.08)", border:`1.5px solid ${founderMode?"#FFD700":"rgba(255,255,255,0.2)"}`, borderRadius:20, padding:"5px 12px", color:founderMode?"#FFD700":"rgba(255,255,255,0.5)", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>
+              {founderMode ? "⚡ GOD MODE" : "⚡ God Mode OFF"}
+            </button>
+          )}
+        </div>
+        <div style={{ marginTop:3, fontSize:9, letterSpacing:"0.15em", color:C.coralLight }}>BECAUSE ONE HELLO CAN CHANGE EVERYTHING</div>
+        {founderMode && isFounder && <div style={{ marginTop:4, fontSize:10, color:"#FFD700", fontFamily:sf }}>⚡ God Mode — all members visible · delete enabled</div>}
+      </div>
+
+      <div style={{ flex:1, padding:"10px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+        {loading ? (
+          <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ fontSize:13, color:C.muted, fontFamily:sf }}>Finding members near you...</div>
+          </div>
+        ) : profile ? <>
+          <div style={{ flex:1, borderRadius:24, overflow:"hidden", position:"relative", boxShadow:"0 8px 32px rgba(0,0,0,0.5)", cursor:"pointer" }} onClick={()=>setShowDetail(true)}>
+            {(profile.photos && profile.photos[0]) || profile.photo_url ? (
+              <img src={(profile.photos && profile.photos[0]) || profile.photo_url} alt={profile.first_name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+            ) : (
+              <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${C.darkCard},${C.dark})`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <div style={{ fontSize:80, opacity:0.3 }}>👤</div>
+              </div>
+            )}
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)" }}/>
+            <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"16px 18px" }}>
+              <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:2 }}>
+                <span style={{ fontSize:24, fontWeight:700, color:C.white }}>{profile.first_name}</span>
+                <span style={{ fontSize:18, color:"rgba(255,255,255,0.8)" }}>{profile.age}</span>
+                {profile.verified && <div style={{ background:C.coral, borderRadius:"50%", width:18, height:18, display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ color:"#fff", fontSize:10, fontWeight:700 }}>✓</span></div>}
+                {profile.founding_member && <div style={{ background:"linear-gradient(135deg,#FFD700,#FFA500)", borderRadius:20, padding:"2px 8px", fontSize:9, color:"#5D3A00", fontWeight:700, fontFamily:sf }}>👑 VIP</div>}
+              </div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.65)", marginBottom:8, fontFamily:sf }}>📍 {profile.location}</div>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                {(profile.interests||[]).slice(0,3).map(tag => {
+                  const shared = myInterests.includes(tag);
+                  return <span key={tag} style={{ background:shared?"rgba(200,97,74,0.6)":"rgba(200,97,74,0.25)", border:`1px solid ${shared?"rgba(255,255,255,0.6)":"rgba(200,97,74,0.4)"}`, borderRadius:20, padding:"3px 10px", fontSize:11, color:C.white, fontFamily:sf, fontWeight:shared?700:400 }}>{shared?"⭐ ":""}{tag}</span>;
+                })}
+              </div>
+              {founderMode && (
+                <button onClick={e=>{e.stopPropagation();deleteProfile(profile);}} style={{ marginTop:8, background:"rgba(255,50,50,0.7)", border:"none", borderRadius:20, padding:"4px 12px", color:"white", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>🗑 Delete profile</button>
+              )}
+            </div>
+            {/* Back button */}
+            {idx > 0 && (
+              <button onClick={e=>{e.stopPropagation();goBack();}} style={{ position:"absolute", top:14, left:14, background:"rgba(0,0,0,0.5)", border:"none", borderRadius:"50%", width:36, height:36, color:C.white, fontSize:16, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>←</button>
+            )}
+            <div style={{ position:"absolute", top:14, right:14, background:"rgba(0,0,0,0.4)", borderRadius:20, padding:"4px 10px" }}><span style={{ fontSize:10, color:"rgba(255,255,255,0.7)", fontFamily:sf }}>Tap for more</span></div>
+          </div>
+
+          {/* Hello / Maybe / Goodbye buttons */}
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={favourites.includes(profile?.id) ? null : sendHello} style={{ flex:1, padding:"14px", borderRadius:16, background:favourites.includes(profile?.id)?`linear-gradient(135deg,#4CAF50,#388E3C)`:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:13, fontWeight:700, cursor:favourites.includes(profile?.id)?"default":"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              <span>{favourites.includes(profile?.id) ? "✅" : "💕"}</span> {favourites.includes(profile?.id) ? "Sent!" : "Hello"}
+            </button>
+            <button onClick={sayMaybe} style={{ flex:1, padding:"14px", borderRadius:16, background:"rgba(255,193,7,0.15)", border:"1px solid rgba(255,193,7,0.4)", color:"#FFC107", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              <span>🤔</span> Maybe
+            </button>
+            <button onClick={sayGoodbye} style={{ flex:1, padding:"14px", borderRadius:16, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+              <span>👋</span> Goodbye
+            </button>
+          </div>
+        </> : (
+          <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12 }}>
+            <div style={{ fontSize:36 }}>✨</div>
+            <div style={{ fontSize:18, color:C.white, fontWeight:600, textAlign:"center" }}>
+              {"No more profiles to show right now."}
+            </div>
+            <div style={{ fontSize:13, color:C.muted, fontFamily:sf, textAlign:"center", lineHeight:1.6 }}>
+              {"Tap refresh to reload, or check your Hello and Maybe lists in the Hellos tab."}
+            </div>
+            <button onClick={loadProfiles} style={{ marginTop:8, padding:"10px 24px", borderRadius:20, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Refresh</button>
+          </div>
+        )}
+      </div>
+
+      {/* Detail modal */}
+      {showDetail && profile && (
+        <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.92)", display:"flex", flexDirection:"column", zIndex:10 }}>
+          <div style={{ flex:1, overflow:"auto", padding:"20px 20px 110px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <button onClick={()=>setShowDetail(false)} style={{ background:C.darkCard, border:"none", borderRadius:"50%", width:36, height:36, color:C.white, fontSize:18, cursor:"pointer" }}>✕</button>
+              <button onClick={()=>setShowReportBlock(true)} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"6px 14px", color:"rgba(255,255,255,0.6)", fontSize:12, cursor:"pointer", fontFamily:sf }}>🚩 Report / Block</button>
+            </div>
+            {profile.photo_url && (
+              <div style={{ marginBottom:16 }}>
+                {/* Main photo */}
+                <img src={(profile.photos && profile.photos[0]) || profile.photo_url} alt={profile.first_name} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280 }}/>
+                {/* Additional photos grid */}
+                {profile.photos && profile.photos.length > 1 && (
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginTop:6 }}>
+                    {profile.photos.slice(1).map((p,i) => (
+                      <img key={i} src={p} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12 }} alt=""/>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{ marginTop:16 }}>
+              <div style={{ fontSize:26, fontWeight:700, color:C.white }}>{profile.first_name}, {profile.age}</div>
+              <div style={{ fontSize:13, color:C.muted, marginBottom:12, fontFamily:sf }}>📍 {profile.location}</div>
+              <p style={{ fontSize:14, color:"rgba(255,255,255,0.8)", lineHeight:1.7, fontFamily:sf, whiteSpace:"pre-wrap" }}>{profile.bio}</p>
+              {sharedTags.length > 0 && (
+                <div style={{ background:"rgba(200,97,74,0.15)", border:"1px solid rgba(200,97,74,0.3)", borderRadius:12, padding:"8px 12px", margin:"12px 0", display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:14 }}>⭐</span>
+                  <span style={{ fontSize:12, color:C.coralLight, fontFamily:sf, fontWeight:600 }}>You both love: {sharedTags.join(", ")}</span>
+                </div>
+              )}
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:14 }}>
+                {(profile.interests||[]).map(tag => {
+                  const shared = myInterests.includes(tag);
+                  return <span key={tag} style={{ background:shared?C.coral:C.coralPale, borderRadius:20, padding:"5px 14px", fontSize:12, color:shared?C.white:C.coral, fontWeight:600, fontFamily:sf }}>{shared?"⭐ ":""}{tag}</span>;
+                })}
+              </div>
+            </div>
+          </div>
+          <div style={{ padding:"12px 20px 20px", position:"absolute", bottom:0, left:0, right:0, display:"flex", gap:10 }}>
+            <button onClick={()=>{ setShowDetail(false); sayGoodbye(); }} style={{ flex:1, padding:"14px", borderRadius:18, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:sf }}>👋 Goodbye</button>
+            <button onClick={()=>{ setShowDetail(false); sendHello(); }} style={{ flex:2, padding:"16px", borderRadius:18, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💕 Hello to {profile.first_name}</button>
+          </div>
+        </div>
+      )}
+
+      {showReportBlock && profile && (
+        <ReportBlockModal
+          profile={profile}
+          currentUser={currentUser}
+          onClose={()=>setShowReportBlock(false)}
+          onBlocked={(id)=>{
+            setBlockedIds(b=>[...b,id]);
+            setShowReportBlock(false);
+            setShowDetail(false);
+            setIdx(i=>i+1);
+          }}
+        />
+      )}
+
+      {toast && <div style={{ position:"absolute", bottom:90, left:"50%", transform:"translateX(-50%)", background:C.coral, color:C.white, padding:"10px 20px", borderRadius:30, fontSize:13, fontWeight:600, whiteSpace:"nowrap", zIndex:20, fontFamily:sf }}>{toast}</div>}
+    </div>
+  );
+}
+
+// ── Hellos / Messages Screen ──────────────────────────────
+function HellosScreen({ currentUser }) {
+  const [hellos, setHellos] = useState([]);
+  const [mutualHellos, setMutualHellos] = useState([]);
+  const [active, setActive] = useState(null);
+  const [isMutual, setIsMutual] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [icebreakers, setIcebreakers] = useState([]);
+  const [showIce, setShowIce] = useState(false);
+  const [tab, setTab] = useState('received'); // received | matches | maybe | sent
+  const [maybeProfiles, setMaybeProfiles] = useState([]);
+  const [sentHelloProfiles, setSentHelloProfiles] = useState([]);
+  const bottomRef = useRef(null);
+
+  useEffect(() => { 
+    if (currentUser?.id) {
+      loadHellos();
+      loadMaybes();
+      loadSentHellos();
+    }
+  }, [currentUser?.id]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages.length]);
+
+  const loadSentHellos = async () => {
+    const { data } = await sb.from('hellos').select('to_user').eq('from_user', currentUser.id);
+    if (!data || data.length === 0) return;
+    const ids = data.map(h => h.to_user);
+    const { data: profiles } = await sb.from('profiles').select('*').in('id', ids);
+    if (profiles) setSentHelloProfiles(profiles);
+  };
+
+  const loadMaybes = async () => {
+    const { data } = await sb.from('maybes').select('to_user').eq('from_user', currentUser.id);
+    if (!data || data.length === 0) return;
+    const ids = data.map(m => m.to_user);
+    const { data: profiles } = await sb.from('profiles').select('*').in('id', ids);
+    if (profiles) setMaybeProfiles(profiles);
+  };
+
+  const loadHellos = async () => {
+    if (!currentUser?.id) return;
+    // Validate UUID format before sending to Supabase
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(currentUser.id)) {
+      console.error('loadHellos: invalid user ID format:', currentUser.id);
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log('Loading hellos for user ID:', currentUser?.id);
+      // Get hellos received
+      const { data: received, error: recError } = await db.getHellosReceived(currentUser?.id);
+      console.log('Received hellos:', received, 'Error:', recError);
+      // Get hellos sent
+      const { data: sent, error: sentError } = await db.getHellosSent(currentUser?.id);
+      console.log('Sent hellos:', sent, 'Error:', sentError);
+      const sentIds = (sent || []).map(h => h.to_user);
+
+      if (received) {
+        setHellos(received);
+        // Find mutual matches — they sent to me AND I sent to them
+        const mutual = received.filter(h => sentIds.includes(h.from_user));
+        setMutualHellos(mutual);
+      }
+    } catch(e) { console.error('loadHellos error:', e); }
+    setLoading(false);
+  };
+
+  const openConvo = async (hello, mutual) => {
+    setActive(hello);
+    setIsMutual(mutual);
+    if (mutual) {
+      const otherId = hello.from_user;
+      const { data } = await db.getMessages(currentUser.id, otherId);
+      if (data) setMessages(data);
+    }
+  };
+
+  const send = async () => {
+    if (!input.trim() || !active || !currentUser || !isMutual) return;
+    const otherId = active.from_user;
+    const msg = { sender_id: currentUser.id, recipient_id: otherId, text: input, read: false };
+    await db.sendMessage(msg);
+    setMessages(prev => [...prev, { ...msg, created_at: new Date().toISOString() }]);
+    // Send email notification
+    try {
+      const { data: myProfile } = await db.getProfile(currentUser.id);
+      if (active.sender?.email && myProfile) {
+        await window.notifyMessage(active.sender.email, active.sender.first_name, myProfile.first_name);
+      }
+    } catch(e) { console.log('Message notification failed:', e); }
+    setInput(''); setShowIce(false);
+  };
+
+  const getIcebreakers = async () => {
+    const p = active?.sender;
+    if (!p) return;
+    setAiLoading(true); setShowIce(true); setIcebreakers([]);
+    try {
+      const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:400,
+          system:"Warm dating coach for 50+. Return ONLY a JSON array of 3 icebreaker strings, no markdown.",
+          messages:[{ role:"user", content:`3 icebreakers for ${p.first_name} (${p.age}), bio: "${p.bio}", interests: ${(p.interests||[]).join(", ")}. Under 30 words each.` }]
+        })
+      });
+      const data = await res.json();
+      setIcebreakers(JSON.parse(data.content[0].text.trim().replace(/```json|```/g,"")));
+    } catch {
+      setIcebreakers(["Your profile genuinely caught my eye!","I'd love to hear more about your adventures.","We seem to share some wonderful interests!"]);
+    }
+    setAiLoading(false);
+  };
+
+  const getProfilePhoto = (hello) => hello?.sender?.photo_url || (hello?.sender?.photos && hello?.sender?.photos[0]) || null;
+  const getProfileName = (hello) => hello?.sender?.first_name || "Member";
+
+  if (active) return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
+      <div style={{ padding:"10px 16px", borderBottom:"1px solid #EAE6E2", display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={()=>{ setActive(null); setShowIce(false); }} style={{ background:"none", border:"none", cursor:"pointer", color:C.coral, fontSize:20 }}>←</button>
+        {getProfilePhoto(active) ? (
+          <img src={getProfilePhoto(active)} style={{ width:38, height:38, borderRadius:"50%", objectFit:"cover" }} alt=""/>
+        ) : (
+          <div style={{ width:38, height:38, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>👤</div>
+        )}
+        <div style={{ flex:1 }}>
+          <div style={{ fontWeight:700, fontSize:15, color:C.text }}>{getProfileName(active)}</div>
+          <div style={{ fontSize:11, color:isMutual?C.coral:C.muted, fontFamily:sf }}>
+            {isMutual ? "💕 Mutual Hello — you can chat!" : active.sender?.location || ""}
+          </div>
+        </div>
+        {isMutual && <button onClick={getIcebreakers} style={{ background:C.coralPale, border:"none", borderRadius:20, padding:"6px 12px", color:C.coral, fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:sf }}>✨ Icebreakers</button>}
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:8 }}>
+        {isMutual ? (
+          <>
+            <div style={{ textAlign:"center", padding:"12px", background:"#E8F5E9", borderRadius:12, marginBottom:4 }}>
+              <p style={{ fontSize:12, color:"#2E7D32", fontFamily:sf, margin:0 }}>💕 You both said Hello! Start the conversation.</p>
+            </div>
+            {messages.map((m,i) => (
+              <div key={i} style={{ display:"flex", justifyContent:m.sender_id===currentUser?.id?"flex-end":"flex-start" }}>
+                <div style={{ maxWidth:"72%", padding:"10px 14px", borderRadius:m.sender_id===currentUser?.id?"18px 18px 4px 18px":"18px 18px 18px 4px", background:m.sender_id===currentUser?.id?`linear-gradient(135deg,${C.coral},${C.coralMid})`:C.offWhite, color:m.sender_id===currentUser?.id?C.white:C.text, fontSize:14, lineHeight:1.5, fontFamily:sf }}>{m.text}</div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, padding:20 }}>
+            <div style={{ fontSize:48 }}>👋</div>
+            <div style={{ fontSize:16, fontWeight:700, color:C.text, textAlign:"center" }}>{getProfileName(active)} said Hello!</div>
+            <p style={{ fontSize:13, color:C.muted, fontFamily:sf, textAlign:"center", lineHeight:1.7 }}>Browse their profile and say Hello back to unlock the conversation. Or simply say Goodbye — they'll never know.</p>
+            <div style={{ background:C.coralPale, borderRadius:14, padding:"12px 16px", width:"100%" }}>
+              <p style={{ fontSize:12, color:C.coral, fontFamily:sf, margin:0, textAlign:"center", lineHeight:1.6 }}>💕 Chat only opens when you both say Hello</p>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef}/>
+      </div>
+      {isMutual && showIce && (
+        <div style={{ padding:"8px 14px", background:C.coralPale, borderTop:"1px solid rgba(200,97,74,0.15)" }}>
+          <div style={{ fontSize:11, color:C.coral, fontWeight:600, marginBottom:6, fontFamily:sf }}>✨ Tap to use</div>
+          {aiLoading ? <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>Generating...</div>
+            : icebreakers.map((ice,i) => <div key={i} onClick={()=>setInput(ice)} style={{ background:C.white, borderRadius:12, padding:"8px 12px", marginBottom:6, fontSize:13, color:C.text, cursor:"pointer", fontFamily:sf }}>{ice}</div>)
+          }
+        </div>
+      )}
+      {isMutual && (
+        <div style={{ padding:"10px 14px 20px", borderTop:"1px solid #EAE6E2", display:"flex", gap:8 }}>
+          <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Say something..." style={{ flex:1, padding:"11px 16px", borderRadius:24, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, fontFamily:sf }}/>
+          <button onClick={send} style={{ width:42, height:42, borderRadius:"50%", background:C.coral, border:"none", color:C.white, fontSize:16, cursor:"pointer" }}>→</button>
+        </div>
+      )}
+    </div>
+  );
+
+  const displayHellos = tab === 'matches' ? mutualHellos : hellos;
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
+      <div style={{ padding:"16px 20px 12px", borderBottom:"1px solid #EAE6E2" }}>
+        <div style={{ fontSize:24, fontWeight:700, color:C.coral }}>Hellos</div>
+        {/* Tabs */}
+        <div style={{ display:"flex", gap:8, marginTop:10, overflowX:"auto", scrollbarWidth:"none" }}>
+          {[['received','👋 Received'],['matches','💕 Matches'],['sent','💌 Sent'],['maybe','🤔 Maybe']].map(([id,label]) => (
+            <button key={id} onClick={()=>setTab(id)} style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${tab===id?C.coral:"#DDD8D4"}`, background:tab===id?C.coralPale:C.white, color:tab===id?C.coral:C.muted, fontSize:12, fontWeight:tab===id?700:400, cursor:"pointer", fontFamily:sf, flexShrink:0 }}>
+              {label} {id==='matches' && mutualHellos.length > 0 ? `(${mutualHellos.length})` : id==='received' && hellos.length > 0 ? `(${hellos.length})` : id==='maybe' && maybeProfiles.length > 0 ? `(${maybeProfiles.length})` : id==='sent' && sentHelloProfiles.length > 0 ? `(${sentHelloProfiles.length})` : ''}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ flex:1, overflow:"auto" }}>
+        {loading ? (
+          <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>Loading...</div>
+        ) : tab === 'sent' ? (
+          sentHelloProfiles.length === 0 ? (
+            <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>💌 No Hellos sent yet.<br/>Browse profiles and tap Hello to connect!</div>
+          ) : (
+            <div>
+              <div style={{ padding:"10px 18px", fontSize:12, color:C.muted, fontFamily:sf, background:"#FFF0EB", borderBottom:"1px solid #F0EBE8" }}>People you said Hello to — waiting for them to Hello back</div>
+              {sentHelloProfiles.map(p => {
+                const photo = p.photos?.[0] || p.photo_url;
+                const isMutualMatch = mutualHellos.some(m => m.from_user === p.id);
+                return (
+                  <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8", background:isMutualMatch?"rgba(200,97,74,0.04)":"transparent" }}>
+                    {photo ? <img src={photo} style={{ width:50, height:50, borderRadius:"50%", objectFit:"cover", border:isMutualMatch?`2px solid ${C.coral}`:"none" }} alt=""/> : <div style={{ width:50, height:50, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>👤</div>}
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:700, fontSize:15, color:C.text }}>{p.first_name}{p.age ? `, ${p.age}` : ''}</div>
+                      <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{p.location || ''}</div>
+                    </div>
+                    {isMutualMatch && <div style={{ fontSize:12, fontWeight:700, color:C.coral, fontFamily:sf }}>💕 Matched!</div>}
+                    {!isMutualMatch && <div style={{ fontSize:11, color:C.muted, fontFamily:sf }}>Awaiting Hello back</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : tab === 'maybe' ? (
+          maybeProfiles.length === 0 ? (
+            <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>🤔 No Maybe profiles yet.<br/>Tap Maybe when browsing to save profiles for later.</div>
+          ) : (
+            <div>
+              <div style={{ padding:"10px 18px", fontSize:12, color:C.muted, fontFamily:sf, background:"#FFF9E6", borderBottom:"1px solid #F0EBE8" }}>Profiles you saved for later — tap Hello to connect</div>
+              {maybeProfiles.map(p => {
+                const photo = p.photos?.[0] || p.photo_url;
+                return (
+                  <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8" }}>
+                    {photo ? <img src={photo} style={{ width:50, height:50, borderRadius:"50%", objectFit:"cover" }} alt=""/> : <div style={{ width:50, height:50, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>👤</div>}
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:700, fontSize:15, color:C.text }}>{p.first_name}{p.age ? `, ${p.age}` : ''}</div>
+                      <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{p.location || ''}</div>
+                    </div>
+                    <button onClick={async()=>{ await sb.rpc('send_hello',{p_from:currentUser.id,p_to:p.id}); await sb.from('maybes').delete().eq('from_user',currentUser.id).eq('to_user',p.id); setMaybeProfiles(prev=>prev.filter(x=>x.id!==p.id)); showToast && showToast(`Hello sent to ${p.first_name}! 💕`); }} style={{ padding:"8px 14px", borderRadius:20, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💕 Hello</button>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : displayHellos.length === 0 ? (
+          <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>
+            {tab === 'matches' ? <>💕 No mutual matches yet.<br/>When you both say Hello, you'll appear here and can chat!</> : <>No Hellos yet.<br/>Browse profiles and send some Hellos!</>}
+          </div>
+        ) : displayHellos.map(h => {
+          const mutual = mutualHellos.some(m => m.id === h.id);
+          const photo = getProfilePhoto(h);
+          return (
+            <div key={h.id} onClick={()=>openConvo(h, mutual)} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8", cursor:"pointer", background:mutual?"rgba(200,97,74,0.04)":"transparent" }}>
+              <div style={{ position:"relative" }}>
+                {photo ? (
+                  <img src={photo} style={{ width:50, height:50, borderRadius:"50%", objectFit:"cover", border:mutual?`2px solid ${C.coral}`:"none" }} alt=""/>
+                ) : (
+                  <div style={{ width:50, height:50, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, border:mutual?`2px solid ${C.coral}`:"none" }}>👤</div>
+                )}
+                {mutual && <div style={{ position:"absolute", bottom:-2, right:-2, width:18, height:18, borderRadius:"50%", background:C.coral, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10 }}>💕</div>}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:15, color:C.text }}>{getProfileName(h)}</div>
+                <div style={{ fontSize:13, color:mutual?C.coral:C.muted, fontFamily:sf, fontWeight:mutual?600:400 }}>
+                  {mutual ? "💕 Mutual match — tap to chat!" : `${h.sender?.location || ""} · Sent you a Hello 👋`}
+                </div>
+              </div>
+              <div style={{ fontSize:11, color:C.muted, fontFamily:sf }}>
+                {new Date(h.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Create Event Form (separate component to avoid hook rules violation) ──
+function CreateEventForm({ currentUser, onBack, onSubmit }) {
+  const [f, setFState] = useState({ title:"", date:"", time:"", location:"", area:"", category:"Social", description:"", free:true, price:"", hosted:true, capacity:"" });
+  const setF = (k,v) => setFState(p=>({...p,[k]:v}));
+  const valid = f.title && f.date && f.time && f.location && f.area && f.description.length >= 20 && (f.free || f.price);
+  const submit = async () => {
+    if (!valid || !currentUser) return;
+    await db.createEvent({ ...f, host_id: currentUser.id, capacity: f.capacity ? parseInt(f.capacity) : null });
+    onSubmit();
+  };
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"14px 20px 20px", flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:10, padding:0 }}>←</button>
+        <div style={{ fontSize:22, fontWeight:700, color:C.white }}>Create an Event</div>
+        <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", fontFamily:sf, marginTop:4 }}>Only Next Hello members can see your event</div>
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"20px 20px 100px" }}>
+        <InputField label="EVENT TITLE" value={f.title} onChange={e=>setF("title",e.target.value)} placeholder="e.g. Sunday Walk in the Park"/>
+        <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+          <div style={{ flex:1 }}>
+            <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:5 }}>DATE</label>
+            <input type="date" value={f.date} onChange={e=>setF("date",e.target.value)} style={{ width:"100%", padding:"12px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+          </div>
+          <div style={{ flex:1 }}>
+            <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:5 }}>TIME</label>
+            <input type="time" value={f.time} onChange={e=>setF("time",e.target.value)} style={{ width:"100%", padding:"12px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+          </div>
+        </div>
+        <InputField label="VENUE" value={f.location} onChange={e=>setF("location",e.target.value)} placeholder="e.g. Hyde Park Café"/>
+        <InputField label="AREA" value={f.area} onChange={e=>setF("area",e.target.value)} placeholder="e.g. Chelsea, London"/>
+        <div style={{ marginBottom:14 }}>
+          <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>FREE OR PAID? *</label>
+          <div style={{ display:"flex", gap:10 }}>
+            {[{label:"🎟 Free",val:true},{label:"💳 Paid",val:false}].map(opt=>(
+              <button key={opt.label} onClick={()=>setF("free",opt.val)} style={{ flex:1, padding:"13px", borderRadius:14, cursor:"pointer", border:`2px solid ${f.free===opt.val?C.coral:"#DDD8D4"}`, background:f.free===opt.val?C.coralPale:C.white, color:f.free===opt.val?C.coral:C.muted, fontSize:14, fontWeight:700, fontFamily:sf }}>{opt.label}</button>
+            ))}
+          </div>
+          {!f.free && <div style={{ marginTop:10 }}><InputField label="PRICE PER PERSON" value={f.price} onChange={e=>setF("price",e.target.value)} placeholder="e.g. £25"/></div>}
+        </div>
+        <div style={{ marginBottom:14 }}>
+          <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>HOSTED? *</label>
+          <div style={{ display:"flex", gap:10 }}>
+            {[{label:"👤 Yes, I'll host",val:true},{label:"🤝 Unhosted",val:false}].map(opt=>(
+              <button key={opt.label} onClick={()=>setF("hosted",opt.val)} style={{ flex:1, padding:"13px", borderRadius:14, cursor:"pointer", border:`2px solid ${f.hosted===opt.val?C.coral:"#DDD8D4"}`, background:f.hosted===opt.val?C.coralPale:C.white, color:f.hosted===opt.val?C.coral:C.muted, fontSize:13, fontWeight:700, fontFamily:sf }}>{opt.label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:14 }}>
+          <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:5 }}>DESCRIPTION</label>
+          <textarea value={f.description} onChange={e=>setF("description",e.target.value)} rows={4} placeholder="Tell members what to expect..." style={{ width:"100%", padding:"13px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.65 }}/>
+          <div style={{ textAlign:"right", fontSize:11, color:f.description.length<20?C.coral:C.muted, fontFamily:sf }}>{f.description.length} chars</div>
+        </div>
+      </div>
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"12px 20px 24px", background:C.white, borderTop:"1px solid #EAE6E2" }}>
+        <Btn disabled={!valid} onClick={submit}>Post Event →</Btn>
+      </div>
+    </div>
+  );
+}
+
+// ── Events Screen ─────────────────────────────────────────
+function EventsScreen({ currentUser }) {
+  const [events, setEvents] = useState([]);
+  const [filter, setFilter] = useState("All");
+  const [showFree, setShowFree] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
+  const CATS = ["All","Social","Music","Outdoors","Crafts","Culture","Food & Drink","Sport","Travel"];
+  const catColor = cat => ({ Social:"#E8896F", Music:"#7B68EE", Outdoors:"#4CAF50", Crafts:"#FF9800", Culture:"#9C27B0", "Food & Drink":"#C8614A", Sport:"#2196F3", Travel:"#00BCD4" }[cat] || C.coral);
+
+  useEffect(() => { loadEvents(); }, []);
+
+  const loadEvents = async () => {
+    setLoading(true);
+    const { data } = await db.getEvents();
+    if (data) setEvents(data);
+    setLoading(false);
+  };
+
+  const filtered = events.filter(e => (filter==="All"||e.category===filter) && (!showFree||e.free));
+
+  if (showCreate) return <CreateEventForm currentUser={currentUser} onBack={()=>setShowCreate(false)} onSubmit={()=>{ loadEvents(); setShowCreate(false); showToast("Event posted! 🎉"); }}/>;
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden", position:"relative" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"14px 20px 16px", flexShrink:0 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+          <div style={{ fontSize:22, fontWeight:700, color:C.white }}>Member Events</div>
+          <button onClick={()=>setShowCreate(true)} style={{ background:"rgba(255,255,255,0.2)", border:"1.5px solid rgba(255,255,255,0.5)", borderRadius:20, padding:"6px 14px", color:C.white, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:sf }}>+ Add Event</button>
+        </div>
+        <div style={{ display:"flex", gap:8, marginTop:8, alignItems:"center" }}>
+          <button onClick={()=>setShowFree(!showFree)} style={{ padding:"5px 14px", borderRadius:20, border:`1.5px solid ${showFree?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.35)"}`, background:showFree?"rgba(255,255,255,0.25)":"transparent", color:C.white, fontSize:12, fontWeight:showFree?700:400, cursor:"pointer", fontFamily:sf }}>🎟 Free only</button>
+          <span style={{ fontSize:11, color:"rgba(255,255,255,0.5)", fontFamily:sf }}>{filtered.length} events</span>
+        </div>
+      </div>
+      <div style={{ display:"flex", gap:8, padding:"10px 14px", overflowX:"auto", flexShrink:0, borderBottom:"1px solid #EAE6E2", scrollbarWidth:"none" }}>
+        {CATS.map(cat=><button key={cat} onClick={()=>setFilter(cat)} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1.5px solid ${filter===cat?C.coral:"#DDD8D4"}`, background:filter===cat?C.coralPale:C.white, color:filter===cat?C.coral:C.muted, fontSize:12, fontWeight:filter===cat?700:400, cursor:"pointer", fontFamily:sf }}>{cat}</button>)}
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"12px 14px 20px" }}>
+        {loading ? <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>Loading events...</div>
+        : filtered.length === 0 ? <div style={{ textAlign:"center", padding:"40px 20px", color:C.muted, fontFamily:sf, fontSize:14, lineHeight:1.6 }}>No events yet.<br/>Be the first to create one!</div>
+        : filtered.map(event => (
+          <div key={event.id} onClick={()=>setSelected(event)} style={{ background:C.white, borderRadius:18, marginBottom:12, boxShadow:"0 2px 12px rgba(0,0,0,0.08)", overflow:"hidden", cursor:"pointer", border:"1px solid #F0EBE8" }}>
+            <div style={{ height:5, background:catColor(event.category) }}/>
+            <div style={{ padding:"12px 14px" }}>
+              <div style={{ display:"flex", gap:6, marginBottom:8, flexWrap:"wrap" }}>
+                <span style={{ background:event.free?"#E8F5E9":"#FFF3E0", color:event.free?"#2E7D32":"#E65100", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700, fontFamily:sf }}>{event.free?"🎟 Free":`💳 ${event.price}`}</span>
+                <span style={{ background:event.hosted?"#EDE7F6":"#F3F3F3", color:event.hosted?"#6A1B9A":C.muted, borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600, fontFamily:sf }}>{event.hosted?"👤 Hosted":"🤝 Unhosted"}</span>
+              </div>
+              <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:4 }}>{event.title}</div>
+              <div style={{ fontSize:12, color:C.muted, fontFamily:sf, display:"flex", flexDirection:"column", gap:2 }}>
+                <span>📅 {event.date ? new Date(event.date).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + (new Date(event.date).getHours() ? ' at ' + new Date(event.date).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : '') : event.event_date ? `${event.event_date} at ${event.event_time}` : 'Date TBC'}</span>
+                <span>📍 {event.location || event.area || 'Location TBC'}</span>
+                {event.description && <span style={{ color:C.text, marginTop:4, lineHeight:1.5 }}>{event.description.substring(0,80)}{event.description.length>80?'...':''}</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {toast && <div style={{ position:"absolute", bottom:16, left:"50%", transform:"translateX(-50%)", background:C.coral, color:C.white, padding:"10px 20px", borderRadius:30, fontSize:13, fontWeight:600, whiteSpace:"nowrap", zIndex:20, fontFamily:sf }}>{toast}</div>}
+    </div>
+  );
+}
+
+// ── Offers Screen ─────────────────────────────────────────
+const SPONSORS=[{id:1,category:"Life Insurance",name:"Assured Life 50+",tagline:"Over 50s life cover from £8/month. No medical required.",emoji:"🛡️",gradient:["#4A148C","#7B1FA2"],memberDiscount:"15% off your first year",rating:4.8},{id:2,category:"Car Insurance",name:"Mature Driver Cover",tagline:"Specialist car insurance that rewards experienced drivers.",emoji:"🚗",gradient:["#0D47A1","#1976D2"],memberDiscount:"£50 discount on first policy",rating:4.7},{id:3,category:"Singles Travel",name:"Solo & Sociable Holidays",tagline:"Group holidays designed for single travellers over 50.",emoji:"✈️",gradient:["#BF360C","#E64A19"],memberDiscount:"£100 off your first trip",rating:4.9},{id:4,category:"Cruises",name:"Silver Voyages",tagline:"Luxury cruises curated for discerning over-50s travellers.",emoji:"🚢",gradient:["#004D40","#00695C"],memberDiscount:"Free cabin upgrade",rating:4.8},{id:5,category:"Health & Wellness",name:"Vitality 50+",tagline:"Private health cover built around your life stage.",emoji:"🏥",gradient:["#1B5E20","#388E3C"],memberDiscount:"First month free",rating:4.6},{id:6,category:"Financial Planning",name:"Chapters Wealth",tagline:"Independent financial advice for life after 50.",emoji:"💰",gradient:["#263238","#455A64"],memberDiscount:"Free 60-min consultation",rating:4.9}];
+
+function OffersScreen() {
+  const [selected, setSelected] = useState(null);
+  if (selected) return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
+      <div style={{ background:`linear-gradient(135deg,${selected.gradient[0]},${selected.gradient[1]})`, padding:"14px 20px 24px", flexShrink:0 }}>
+        <button onClick={()=>setSelected(null)} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:14, padding:0 }}>←</button>
+        <div style={{ fontSize:36, marginBottom:8 }}>{selected.emoji}</div>
+        <div style={{ fontSize:10, letterSpacing:"0.12em", color:"rgba(255,255,255,0.65)", fontFamily:sf, marginBottom:4 }}>{selected.category.toUpperCase()}</div>
+        <div style={{ fontSize:22, fontWeight:700, color:C.white, marginBottom:6 }}>{selected.name}</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.8)", fontFamily:sf }}>{selected.tagline}</div>
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"16px 20px 100px" }}>
+        <div style={{ background:C.coralPale, borderRadius:16, padding:"14px 16px", marginBottom:16, display:"flex", gap:12, alignItems:"center" }}>
+          <div style={{ fontSize:28 }}>🎁</div>
+          <div>
+            <div style={{ fontSize:11, fontWeight:700, color:C.coral, fontFamily:sf, marginBottom:2 }}>EXCLUSIVE MEMBER OFFER</div>
+            <div style={{ fontSize:15, fontWeight:700, color:C.text }}>{selected.memberDiscount}</div>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:sf, marginTop:1 }}>Only available to Next Hello members</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"12px 20px 24px", background:C.white, borderTop:"1px solid #EAE6E2" }}>
+        <button style={{ width:"100%", padding:"15px", borderRadius:16, background:`linear-gradient(135deg,${selected.gradient[0]},${selected.gradient[1]})`, border:"none", color:C.white, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:sf }}>Find Out More →</button>
+        <p style={{ textAlign:"center", fontSize:11, color:C.muted, fontFamily:sf, margin:"8px 0 0" }}>Quote "Next Hello" for your member discount.</p>
+      </div>
+    </div>
+  );
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.offWhite, overflow:"hidden" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.dark},${C.darkCard})`, padding:"14px 20px 16px", flexShrink:0 }}>
+        <div style={{ fontSize:22, fontWeight:700, color:C.white, marginBottom:2 }}>Member Offers</div>
+        <div style={{ fontSize:12, color:"rgba(255,255,255,0.6)", fontFamily:sf }}>Exclusive deals — chosen for the over-50s</div>
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"12px 14px 20px" }}>
+        {SPONSORS.map(s=>(
+          <div key={s.id} onClick={()=>setSelected(s)} style={{ background:C.white, borderRadius:16, marginBottom:10, overflow:"hidden", cursor:"pointer", boxShadow:"0 2px 8px rgba(0,0,0,0.07)", border:"1px solid #F0EBE8" }}>
+            <div style={{ height:4, background:`linear-gradient(90deg,${s.gradient[0]},${s.gradient[1]})` }}/>
+            <div style={{ padding:"12px 14px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:10, color:C.muted, fontFamily:sf, marginBottom:4 }}>{s.category}</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:C.text, marginBottom:3 }}>{s.name}</div>
+                  <div style={{ fontSize:12, color:C.muted, fontFamily:sf, lineHeight:1.4 }}>{s.tagline}</div>
+                </div>
+                <div style={{ fontSize:32, flexShrink:0 }}>{s.emoji}</div>
+              </div>
+              <div style={{ marginTop:10, background:C.coralPale, borderRadius:10, padding:"7px 12px" }}>
+                <span style={{ fontSize:12, color:C.coral, fontWeight:700, fontFamily:sf }}>🎁 {s.memberDiscount}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
+  const [profile, setProfile] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(null); // index being uploaded
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAI, setShowAI] = useState(false);
+  const [aiBios, setAiBios] = useState([]);
+  const [newInterest, setNewInterest] = useState('');
+  const communityInterests = useCommunityInterests();
+  const photoInputRef = useRef(null);
+  const [zoomPhoto, setZoomPhoto] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState(null);
+  const [profileError, setProfileError] = useState(null);
+
+  useEffect(() => { loadProfile(); }, [currentUser]);
+
+  const loadProfile = async () => {
+    if (!currentUser?.id) return;
+    setProfileError(null);
+    try {
+      const { data, error } = await db.getProfile(currentUser.id);
+      if (error) { setProfileError(error.message); return; }
+      if (data) {
+        // Ensure all fields have safe defaults
+        const safe = {
+          first_name: '', last_name: '', age: '', gender: '',
+          interested_in: [], location: '', bio: '', interests: [],
+          photos: [], photo_url: null, founding_member: false,
+          verified: false, status: 'active',
+          ...data
+        };
+        setProfile(safe); setDraft(safe);
+      } else {
+        setProfileError('Profile not found. Please contact support.');
+      }
+    } catch(e) { setProfileError(e.message); }
+  };
+
+  // Get photos array from profile (up to 6)
+  const getPhotos = (p) => {
+    if (!p) return [];
+    const photos = p.photos || [];
+    if (p.photo_url && !photos.includes(p.photo_url)) return [p.photo_url, ...photos].slice(0,6);
+    return photos.slice(0,6);
+  };
+
+  const handlePhotoUpload = async (e, slotIndex) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingSlot(slotIndex);
+    try {
+      const url = await window.uploadPhoto(file);
+      const currentPhotos = getPhotos(profile);
+      const newPhotos = [...currentPhotos];
+      newPhotos[slotIndex] = url;
+      const updated = { ...profile, photos: newPhotos, photo_url: newPhotos[0] };
+      await db.saveProfile({ ...updated, id: currentUser.id });
+      setProfile(updated); setDraft(updated);
+    } catch(err) { alert('Photo upload failed. Please try again.'); }
+    setUploadingSlot(null);
+    e.target.value = '';
+  };
+
+  const removePhoto = async (slotIndex) => {
+    const currentPhotos = getPhotos(profile);
+    const newPhotos = currentPhotos.filter((_,i) => i !== slotIndex);
+    const updated = { ...profile, photos: newPhotos, photo_url: newPhotos[0] || null };
+    await db.saveProfile({ ...updated, id: currentUser.id });
+    setProfile(updated); setDraft(updated);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const { error } = await db.saveProfile({ ...draft, id: currentUser.id });
+      if (error) { alert('Could not save: ' + error.message); setSaving(false); return; }
+      setProfile(draft); setEditing(false); setShowAI(false);
+    } catch(e) { alert('Save failed: ' + e.message); }
+    setSaving(false);
+  };
+
+  const generateBios = async () => {
+    setAiLoading(true); setShowAI(true); setAiBios([]);
+    try {
+      const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:500,
+          system:"Dating profile coach for 50+. Return ONLY a JSON array of 3 bio strings, no markdown.",
+          messages:[{ role:"user", content:`3 bios for ${draft.first_name}, ${draft.age}, ${draft.location}, interests: ${(draft.interests||[]).join(", ")}. 2-3 sentences, max 60 words, warm.` }]
+        })
+      });
+      const data = await res.json();
+      setAiBios(JSON.parse(data.content[0].text.trim().replace(/```json|```/g,"")));
+    } catch {
+      setAiBios(["Life has given me rich experiences — and I'm not done yet.","After years of putting others first, I'm finally exploring what lights me up.","I've learned the best conversations happen over good food and wine."]);
+    }
+    setAiLoading(false);
+  };
+
+  if (profileError) return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:C.white, padding:30, gap:16 }}>
+      <div style={{ fontSize:36 }}>⚠️</div>
+      <div style={{ fontSize:16, fontWeight:700, color:C.text, textAlign:"center" }}>Couldn't load your profile</div>
+      <div style={{ fontSize:13, color:C.muted, fontFamily:sf, textAlign:"center", lineHeight:1.6 }}>{profileError}</div>
+      <button onClick={loadProfile} style={{ padding:"12px 28px", borderRadius:16, background:C.coral, border:"none", color:C.white, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:sf }}>Try Again</button>
+      <button onClick={onSignOut} style={{ background:"none", border:"none", color:C.muted, fontSize:13, cursor:"pointer", fontFamily:sf }}>Sign Out</button>
+    </div>
+  );
+
+  if (!profile) return <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", background:C.white }}><div style={{ fontSize:13, color:C.muted, fontFamily:sf }}>Loading profile...</div></div>;
+
+  return (
+    <div style={{ flex:1, background:C.white, overflow:"auto" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"20px 20px 20px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ fontSize:22, fontWeight:700, color:C.white }}>My Profile</div>
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            {isGodMode(currentUser) && <div style={{ background:"rgba(255,215,0,0.2)", border:"1px solid #FFD700", borderRadius:20, padding:"4px 10px", fontSize:10, color:"#FFD700", fontWeight:700, fontFamily:sf }}>⚡ GOD MODE</div>}
+            <button onClick={onSignOut} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:20, padding:"6px 14px", color:C.white, fontSize:12, cursor:"pointer", fontFamily:sf }}>Sign Out</button>
+          </div>
+        </div>
+      </div>
+      {/* Photo grid */}
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"20px 20px 10px", borderBottom:"1px solid #EAE6E2" }}>
+        {/* Main profile photo - large */}
+        <div style={{ position:"relative", marginBottom:10 }}>
+          {getPhotos(profile)[0] ? (
+            <img src={getPhotos(profile)[0]} style={{ width:90, height:90, borderRadius:"50%", objectFit:"cover", border:`3px solid ${C.coral}` }} alt=""/>
+          ) : (
+            <div style={{ width:90, height:90, borderRadius:"50%", background:C.coralPale, border:`3px solid ${C.coral}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:40 }}>👤</div>
+          )}
+          <label style={{ position:"absolute", bottom:0, right:0, width:30, height:30, borderRadius:"50%", background:C.coral, border:"2px solid white", color:C.white, fontSize:16, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            {uploadingSlot===0 ? "⏳" : "📷"}
+            <input type="file" accept="image/*" onChange={e=>handlePhotoUpload(e,0)} style={{ display:"none" }}/>
+          </label>
+        </div>
+        <div style={{ fontSize:20, fontWeight:700, color:C.text }}>{profile.first_name}{profile.age ? `, ${profile.age}` : ""}</div>
+        <div style={{ fontSize:13, color:C.muted, fontFamily:sf, marginTop:2 }}>📍 {profile.location}</div>
+        <div style={{ display:"flex", gap:6, justifyContent:"center", flexWrap:"wrap", marginTop:6 }}>
+          {profile.verified && <div style={{ background:C.coralPale, borderRadius:20, padding:"3px 12px", fontSize:12, color:C.coral, fontWeight:600, fontFamily:sf }}>✓ Verified</div>}
+          {profile.founding_member && <div style={{ background:"linear-gradient(135deg,#FFD700,#FFA500)", borderRadius:20, padding:"4px 14px", fontSize:12, color:"#5D3A00", fontWeight:700, fontFamily:sf }}>👑 VIP Founding Member</div>}
+        </div>
+
+        {/* 6-photo grid */}
+        <div style={{ width:"100%", marginTop:16 }}>
+          <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>MY PHOTOS <span style={{ color:C.muted, fontWeight:400 }}>({getPhotos(profile).length}/6)</span></div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+            {[0,1,2,3,4,5].map(i => {
+              const photos = getPhotos(profile);
+              const hasPhoto = !!photos[i];
+              return (
+                <div key={i} style={{ aspectRatio:"1", borderRadius:14, overflow:"hidden", position:"relative", background:C.offWhite, border:`2px dashed ${hasPhoto?"transparent":"#DDD8D4"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {hasPhoto ? (
+                    <>
+                      <img src={photos[i]} onClick={()=>setZoomPhoto(photos[i])} style={{ width:"100%", height:"100%", objectFit:"cover", cursor:"zoom-in" }} alt=""/>
+                      {i===0 && <div style={{ position:"absolute", bottom:4, left:4, background:C.coral, borderRadius:8, padding:"2px 6px", fontSize:9, color:C.white, fontWeight:700, fontFamily:sf }}>MAIN</div>}
+                      <button onClick={()=>removePhoto(i)} style={{ position:"absolute", top:4, right:4, width:20, height:20, borderRadius:"50%", background:"rgba(0,0,0,0.6)", border:"none", color:C.white, fontSize:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+                    </>
+                  ) : (
+                    <label style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+                      {uploadingSlot===i ? (
+                        <div style={{ fontSize:18, color:C.muted }}>⏳</div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize:22, color:"#CCC", marginBottom:2 }}>+</div>
+                          <div style={{ fontSize:9, color:C.muted, fontFamily:sf }}>{i===0?"Add photo":"Add"}</div>
+                        </>
+                      )}
+                      <input type="file" accept="image/*" onChange={e=>handlePhotoUpload(e,i)} style={{ display:"none" }}/>
+                    </label>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p style={{ fontSize:11, color:C.muted, fontFamily:sf, marginTop:8, textAlign:"center", lineHeight:1.5 }}>📸 Tap + to add a photo · Tap ✕ to remove · First photo is your main profile photo</p>
+        </div>
+      </div>
+      <div style={{ padding:"16px 20px 80px" }}>
+
+        {!editing ? <>
+          <div style={{ background:C.offWhite, borderRadius:16, padding:"14px 16px", marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:C.coral, marginBottom:4, letterSpacing:"0.08em", fontFamily:sf }}>ABOUT ME</div>
+            <p style={{ fontSize:14, color:C.text, lineHeight:1.65, fontFamily:sf, margin:0, whiteSpace:"pre-wrap" }}>{profile.bio || "No bio yet — tap Edit Profile to add one!"}</p>
+          </div>
+          <div style={{ background:C.offWhite, borderRadius:16, padding:"14px 16px", marginBottom:16 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:C.coral, marginBottom:8, letterSpacing:"0.08em", fontFamily:sf }}>INTERESTS</div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {(profile.interests||[]).length > 0 ? (profile.interests||[]).map(t=><span key={t} style={{ background:C.coralPale, borderRadius:20, padding:"5px 14px", fontSize:12, color:C.coral, fontWeight:600, fontFamily:sf }}>{t}</span>)
+              : <span style={{ fontSize:13, color:C.muted, fontFamily:sf }}>No interests added yet</span>}
+            </div>
+          </div>
+          <Btn onClick={()=>{ setEditing(true); setDraft(profile); setShowAI(false); }}>Edit Profile</Btn>
+          <div style={{ marginTop:10 }}>
+            <Btn outline onClick={onViewIntro}>▶ Watch App Introduction</Btn>
+          </div>
+
+          {/* Community Rules — prominent */}
+          <div onClick={onViewRules} style={{ marginTop:10, background:`linear-gradient(135deg,${C.coralPale},#FFF0EB)`, border:`1.5px solid ${C.coral}`, borderRadius:16, padding:"14px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:40, height:40, borderRadius:"50%", background:C.coral, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>📋</div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color:C.coral }}>Community Guidelines & Rules</div>
+              <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>How Next Hello works · Your rights · Our promises</div>
+            </div>
+            <div style={{ marginLeft:"auto", fontSize:18, color:C.coral }}>›</div>
+          </div>
+
+          {/* Danger zone */}
+          <div style={{ marginTop:20, borderTop:"1px solid #EAE6E2", paddingTop:16 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:C.muted, letterSpacing:"0.08em", fontFamily:sf, marginBottom:10 }}>ACCOUNT</div>
+            <button onClick={()=>setShowDeleteModal(true)} style={{ width:"100%", padding:"13px 18px", borderRadius:14, background:"#FFF5F5", border:"1.5px solid #FFCDD2", color:"#C62828", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sf, display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:18 }}>⚙️</span> Manage or Delete My Account
+            </button>
+          </div>
+
+          {/* Delete/Manage Account Modal */}
+          {showDeleteModal && (
+            <div onClick={e=>{if(e.target===e.currentTarget)setShowDeleteModal(false);}} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:999 }}>
+              <div style={{ background:C.white, borderRadius:"22px 22px 0 0", width:"100%", maxWidth:390, padding:"20px 22px 40px", fontFamily:sf }}>
+                <div style={{ width:40, height:4, background:"#DDD", borderRadius:2, margin:"0 auto 20px" }}/>
+                <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:4 }}>Manage Your Account</div>
+                <div style={{ fontSize:13, color:C.muted, marginBottom:20, lineHeight:1.5 }}>What would you like to do? If you permanently delete your account, all your data is completely removed from our systems in line with GDPR and UK data protection law.</div>
+
+                <button onClick={async()=>{ await db.pauseProfile(currentUser.id); setShowDeleteModal(false); onSignOut(); }} style={{ width:"100%", padding:"14px", borderRadius:14, background:"#FFF8E1", border:"1.5px solid #FFD54F", color:"#F57F17", fontSize:14, fontWeight:700, cursor:"pointer", marginBottom:10, display:"flex", alignItems:"center", gap:10, textAlign:"left" }}>
+                  <span style={{fontSize:20}}>⏸</span>
+                  <div>
+                    <div>Pause my profile for 30 days</div>
+                    <div style={{fontSize:11, fontWeight:400, opacity:0.8}}>Hidden from browse — automatically reactivates after 30 days</div>
+                  </div>
+                </button>
+
+                <button onClick={async()=>{ await db.deactivateProfile(currentUser.id); setShowDeleteModal(false); onSignOut(); }} style={{ width:"100%", padding:"14px", borderRadius:14, background:"#F3E5F5", border:"1.5px solid #CE93D8", color:"#6A1B9A", fontSize:14, fontWeight:700, cursor:"pointer", marginBottom:10, display:"flex", alignItems:"center", gap:10, textAlign:"left" }}>
+                  <span style={{fontSize:20}}>💤</span>
+                  <div>
+                    <div>Deactivate my account</div>
+                    <div style={{fontSize:11, fontWeight:400, opacity:0.8}}>Hidden indefinitely — you can reactivate anytime by logging back in</div>
+                  </div>
+                </button>
+
+                <button onClick={async()=>{ if(window.confirm("Are you absolutely sure? This permanently deletes your profile and cannot be undone.")){ await db.deleteAccount(currentUser.id); setShowDeleteModal(false); }}} style={{ width:"100%", padding:"14px", borderRadius:14, background:"#FFEBEE", border:"1.5px solid #EF9A9A", color:"#C62828", fontSize:14, fontWeight:700, cursor:"pointer", marginBottom:14, display:"flex", alignItems:"center", gap:10, textAlign:"left" }}>
+                  <span style={{fontSize:20}}>🗑️</span>
+                  <div>
+                    <div>Permanently delete my account</div>
+                    <div style={{fontSize:11, fontWeight:400, opacity:0.8}}>Cannot be undone — all your data will be removed</div>
+                  </div>
+                </button>
+
+                <button onClick={()=>setShowDeleteModal(false)} style={{ width:"100%", padding:"12px", borderRadius:14, background:"none", border:"none", color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </> : (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {/* Bug 10 fix - allow editing name and location */}
+            <div style={{ display:"flex", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>FIRST NAME</label>
+                <input value={draft.first_name||""} onChange={e=>setDraft(d=>({...d,first_name:e.target.value}))} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>LAST NAME</label>
+                <input value={draft.last_name||""} onChange={e=>setDraft(d=>({...d,last_name:e.target.value}))} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+              </div>
+            </div>
+            <div>
+              <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>LOCATION</label>
+              <input value={draft.location||""} onChange={e=>setDraft(d=>({...d,location:e.target.value}))} placeholder="e.g. Manchester" style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
+            </div>
+            <div>
+              <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>BIO</label>
+              <textarea value={draft.bio||""} onChange={e=>setDraft(d=>({...d,bio:e.target.value}))} rows={4} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.6 }}/>
+            </div>
+            <button onClick={generateBios} style={{ padding:"10px", borderRadius:12, border:`1.5px solid ${C.coral}`, background:C.coralPale, color:C.coral, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sf }}>✨ Generate AI Bio Suggestions</button>
+            {showAI && (
+              <div style={{ background:C.coralPale, borderRadius:14, padding:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:C.coral, marginBottom:8, fontFamily:sf }}>Tap a bio to use it</div>
+                {aiLoading ? <div style={{ fontSize:13, color:C.muted, fontFamily:sf }}>Crafting bios...</div>
+                  : aiBios.map((bio,i)=><div key={i} onClick={()=>setDraft(d=>({...d,bio}))} style={{ background:C.white, borderRadius:12, padding:"10px 12px", marginBottom:8, fontSize:13, color:C.text, cursor:"pointer", fontFamily:sf, lineHeight:1.55 }}>{bio}</div>)}
+              </div>
+            )}
+            {/* Interests editor */}
+            <div>
+              <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:6 }}>INTERESTS</label>
+              {/* Current interests */}
+              <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:10 }}>
+                {(draft.interests||[]).map(t=>(
+                  <span key={t} onClick={()=>setDraft(d=>({...d,interests:d.interests.filter(x=>x!==t)}))} style={{ background:C.coralPale, borderRadius:20, padding:"5px 12px", fontSize:12, color:C.coral, fontWeight:600, cursor:"pointer", fontFamily:sf }}>{t} ✕</span>
+                ))}
+              </div>
+              {/* Browse all interests */}
+              <details style={{ marginBottom:10 }}>
+                <summary style={{ fontSize:12, color:C.coral, fontWeight:600, fontFamily:sf, cursor:"pointer", marginBottom:8 }}>Browse all interests to add</summary>
+                <div style={{ maxHeight:200, overflow:"auto", background:C.offWhite, borderRadius:12, padding:"10px 12px" }}>
+                  {INTERESTS_GROUPED.map(group=>(
+                    <div key={group.category} style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:C.muted, letterSpacing:"0.1em", fontFamily:sf, marginBottom:6 }}>{group.category.toUpperCase()}</div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                        {group.items.filter(t=>!(draft.interests||[]).includes(t)).map(t=>(
+                          <span key={t} onClick={()=>setDraft(d=>({...d,interests:[...(d.interests||[]),t]}))} style={{ background:C.white, border:`1px solid ${C.coral}`, borderRadius:20, padding:"4px 10px", fontSize:11, color:C.coral, cursor:"pointer", fontFamily:sf }}>+ {t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {/* Community interests in edit too */}
+                  {(() => {
+                    const communityOnly = communityInterests.filter(ci => !INTERESTS_GROUPED.flatMap(g=>g.items).includes(ci) && !(draft.interests||[]).includes(ci));
+                    return communityOnly.length > 0 ? (
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:C.muted, letterSpacing:"0.1em", fontFamily:sf, marginBottom:6 }}>✨ ADDED BY MEMBERS</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                          {communityOnly.map(t=>(
+                            <span key={t} onClick={()=>setDraft(d=>({...d,interests:[...(d.interests||[]),t]}))} style={{ background:C.white, border:`1px solid ${C.coral}`, borderRadius:20, padding:"4px 10px", fontSize:11, color:C.coral, cursor:"pointer", fontFamily:sf }}>+ {t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              </details>
+              {/* Add custom */}
+              <div style={{ display:"flex", gap:8 }}>
+                <input value={newInterest} onChange={e=>setNewInterest(e.target.value)}
+                  onKeyDown={e=>{ if(e.key==="Enter" && newInterest.trim()){ const t=newInterest.trim(); if(!(draft.interests||[]).includes(t)){ setDraft(d=>({...d,interests:[...(d.interests||[]),t]})); db.submitCustomInterest(t, currentUser?.id); } setNewInterest(''); }}}
+                  placeholder="Add your own interest..." style={{ flex:1, padding:"10px 14px", borderRadius:22, border:"1.5px solid #DDD8D4", outline:"none", fontSize:13, background:C.offWhite, fontFamily:sf }}/>
+                <button onClick={()=>{ const t=newInterest.trim(); if(t){ if(!(draft.interests||[]).includes(t)){ setDraft(d=>({...d,interests:[...(d.interests||[]),t]})); db.submitCustomInterest(t, currentUser?.id); } setNewInterest(''); }}} style={{ padding:"10px 16px", borderRadius:22, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Add</button>
+              </div>
+              <p style={{ fontSize:11, color:C.muted, fontFamily:sf, marginTop:6, lineHeight:1.5 }}>✨ Custom interests are shared with the community</p>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <Btn outline onClick={()=>{ setEditing(false); setShowAI(false); }}>Cancel</Btn>
+              <Btn onClick={save} disabled={saving}>{saving?"Saving...":"Save"}</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Photo zoom modal */}
+      {zoomPhoto && (
+        <div onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:50, cursor:"zoom-out" }}>
+          <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
+          <img src={zoomPhoto} style={{ maxWidth:"95%", maxHeight:"90%", borderRadius:16, objectFit:"contain", boxShadow:"0 8px 40px rgba(0,0,0,0.8)" }} alt=""/>
+          <p style={{ position:"absolute", bottom:20, color:"rgba(255,255,255,0.4)", fontSize:12, fontFamily:sf }}>Tap anywhere to close</p>
+        </div>
+      )}
+    </div>
+  );
+}
+// ── Admin Panel ───────────────────────────────────────────
+function AdminScreen({ currentUser }) {
+  const [adminTab, setAdminTab] = useState('members');
+  const [members, setMembers] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [customInterests, setCustomInterests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [messageTarget, setMessageTarget] = useState(null);
+  const [messageText, setMessageText] = useState('');
+  const [messageSending, setMessageSending] = useState(false);
+
+  const QUICK_MESSAGES = [
+    `Hi! Could you please update your profile photo to a clear, recent photo of your face? Members with face photos get far more Hellos! 😊`,
+    `Hi! Welcome to Next Hello! Just a heads up — your profile photo doesn't appear to show your face. A clear photo of you makes a huge difference! 📸`,
+    `Hi! I noticed you haven't added a profile photo yet. Members with photos get 5× more Hellos — add one in your Profile tab! 😊`,
+    `Hi! Just a friendly note from the Next Hello team — please make sure your profile photo shows your face clearly. This helps other members connect with you!`,
+  ];
+
+  const sendAdminMessage = async () => {
+    if (!messageTarget || !messageText.trim()) return;
+    setMessageSending(true);
+    try {
+      await db.sendMessage({ sender_id: currentUser.id, recipient_id: messageTarget.id, text: `👑 Message from Next Hello founder:\n\n${messageText.trim()}`, read: false });
+      showToast(`Message sent to ${messageTarget.first_name} ✅`);
+      setMessageTarget(null); setMessageText('');
+    } catch(e) { showToast('Failed to send message'); }
+    setMessageSending(false);
+  };
+
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
+
+  useEffect(() => { loadAll(); }, [adminTab]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    if (adminTab === 'members') {
+      const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+      if (data) setMembers(data);
+    }
+    if (adminTab === 'reports') {
+      const { data } = await sb.from('reports').select('*, reporter:profiles!reports_reporter_id_fkey(first_name,last_name), reported:profiles!reports_reported_id_fkey(first_name,last_name)').order('created_at', { ascending: false });
+      if (data) setReports(data);
+    }
+    if (adminTab === 'events') {
+      const { data } = await db.getEvents();
+      if (data) setEvents(data);
+    }
+    if (adminTab === 'interests') {
+      const { data } = await sb.from('custom_interests').select('*').order('count', { ascending: false });
+      if (data) setCustomInterests(data);
+    }
+    setLoading(false);
+  };
+
+  const deleteMember = async (m) => {
+    if (!window.confirm(`Delete ${m.first_name} ${m.last_name}? This cannot be undone.`)) return;
+    await sb.from('profiles').delete().eq('id', m.id);
+    showToast(`${m.first_name} deleted`);
+    loadAll();
+  };
+
+  const suspendMember = async (m) => {
+    await sb.from('profiles').update({ status: 'suspended' }).eq('id', m.id);
+    showToast(`${m.first_name} suspended`);
+    loadAll();
+  };
+
+  const reinstateMember = async (m) => {
+    await sb.from('profiles').update({ status: 'active' }).eq('id', m.id);
+    showToast(`${m.first_name} reinstated`);
+    loadAll();
+  };
+
+  const resolveReport = async (r) => {
+    await sb.from('reports').update({ status: 'resolved' }).eq('id', r.id);
+    showToast('Report marked as resolved');
+    loadAll();
+  };
+
+  const deleteEvent = async (e) => {
+    if (!window.confirm(`Delete event "${e.title}"?`)) return;
+    await sb.from('events').delete().eq('id', e.id);
+    showToast('Event deleted');
+    loadAll();
+  };
+
+  const toggleInterestApproval = async (ci) => {
+    await sb.from('custom_interests').update({ approved: !ci.approved }).eq('id', ci.id);
+    showToast(ci.approved ? 'Interest hidden' : 'Interest approved');
+    loadAll();
+  };
+
+  const deleteInterest = async (ci) => {
+    await sb.from('custom_interests').delete().eq('id', ci.id);
+    showToast('Interest deleted');
+    loadAll();
+  };
+
+  const statusColour = (s) => {
+    if (s === 'active') return '#2E7D32';
+    if (s === 'suspended') return '#C62828';
+    if (s === 'paused') return '#F57F17';
+    if (s === 'deactivated') return '#6A1B9A';
+    return C.muted;
+  };
+
+  const ADMIN_TABS = [
+    { id:'members', label:'👥 Members' },
+    { id:'reports', label:'🚩 Reports' },
+    { id:'events', label:'🎉 Events' },
+    { id:'interests', label:'✨ Interests' },
+  ];
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
+      {/* Header */}
+      <div style={{ background:`linear-gradient(135deg,#1E1C1B,#2A2826)`, padding:"14px 20px 0", flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+          <div style={{ fontSize:20 }}>⚡</div>
+          <div>
+            <div style={{ fontSize:18, fontWeight:700, color:"#FFD700" }}>Admin Panel</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)", fontFamily:sf }}>God Mode · {members.length} members</div>
+          </div>
+        </div>
+        {/* Admin tabs */}
+        <div style={{ display:"flex", gap:4, overflowX:"auto" }}>
+          {ADMIN_TABS.map(t => (
+            <button key={t.id} onClick={()=>setAdminTab(t.id)} style={{ padding:"8px 14px", borderRadius:"10px 10px 0 0", background:adminTab===t.id?"#FFD700":"rgba(255,255,255,0.08)", border:"none", color:adminTab===t.id?"#1E1C1B":"rgba(255,255,255,0.6)", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:sf, whiteSpace:"nowrap", flexShrink:0 }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex:1, overflow:"auto", background:"#F8F6F4" }}>
+        {loading ? (
+          <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>Loading...</div>
+        ) : (
+
+          // ── MEMBERS ──
+          adminTab === 'members' && (
+            <div>
+              <div style={{ padding:"12px 16px", background:C.white, borderBottom:"1px solid #EAE6E2", fontSize:12, color:C.muted, fontFamily:sf }}>
+                {members.length} total members · {members.filter(m=>m.status==='active'||!m.status).length} active · {members.filter(m=>m.status==='suspended').length} suspended
+              </div>
+              {members.map(m => (
+                <div key={m.id} style={{ background:C.white, borderBottom:"1px solid #F0EBE8", padding:"12px 16px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                    {m.photo_url ? (
+                      <img src={m.photo_url} style={{ width:44, height:44, borderRadius:"50%", objectFit:"cover", flexShrink:0 }} alt=""/>
+                    ) : (
+                      <div style={{ width:44, height:44, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>👤</div>
+                    )}
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:C.text }}>{m.first_name} {m.last_name}{m.age?`, ${m.age}`:''}</div>
+                      <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{m.location || '—'} · {m.gender || '—'}</div>
+                      <div style={{ display:"flex", gap:6, marginTop:4, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:10, fontWeight:700, color:statusColour(m.status||'active'), fontFamily:sf }}>{(m.status||'active').toUpperCase()}</span>
+                        {m.founding_member && <span style={{ fontSize:10, fontWeight:700, color:"#B8860B", fontFamily:sf }}>👑 VIP</span>}
+                        {m.verified && <span style={{ fontSize:10, fontWeight:700, color:"#1565C0", fontFamily:sf }}>✓ VERIFIED</span>}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Bio preview */}
+                  {m.bio && <div style={{ fontSize:12, color:C.muted, fontFamily:sf, lineHeight:1.5, marginBottom:8, padding:"8px 10px", background:"#F8F6F4", borderRadius:8, overflow:"hidden", maxHeight:48 }}>{m.bio.substring(0,120)}{m.bio.length>120?'...':''}</div>}
+                  {/* Action buttons */}
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    {(m.status === 'suspended') ? (
+                      <button onClick={()=>reinstateMember(m)} style={{ padding:"5px 12px", borderRadius:20, background:"#E8F5E9", border:"1px solid #A5D6A7", color:"#2E7D32", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>✅ Reinstate</button>
+                    ) : m.id !== currentUser?.id && (
+                      <button onClick={()=>suspendMember(m)} style={{ padding:"5px 12px", borderRadius:20, background:"#FFF8E1", border:"1px solid #FFD54F", color:"#F57F17", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>⏸ Suspend</button>
+                    )}
+                    {m.id !== currentUser?.id && (
+                      <button onClick={()=>deleteMember(m)} style={{ padding:"5px 12px", borderRadius:20, background:"#FFEBEE", border:"1px solid #EF9A9A", color:"#C62828", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>🗑 Delete</button>
+                    )}
+                    <button onClick={()=>{ setMessageTarget(m); setMessageText(''); }} style={{ padding:"5px 12px", borderRadius:20, background:"#E3F2FD", border:"1px solid #90CAF9", color:"#1565C0", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💬 Message</button>
+                    <button onClick={async()=>{ await sb.from('profiles').update({ founding_member:!m.founding_member }).eq('id',m.id); showToast(m.founding_member?'VIP removed':'VIP granted'); loadAll(); }} style={{ padding:"5px 12px", borderRadius:20, background:"rgba(255,215,0,0.15)", border:"1px solid #FFD700", color:"#B8860B", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>
+                      {m.founding_member ? '👑 Remove VIP' : '👑 Grant VIP'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {/* ── REPORTS ── */}
+        {!loading && adminTab === 'reports' && (
+          <div>
+            <div style={{ padding:"12px 16px", background:C.white, borderBottom:"1px solid #EAE6E2", fontSize:12, color:C.muted, fontFamily:sf }}>
+              {reports.length} reports · {reports.filter(r=>r.status==='pending').length} pending
+            </div>
+            {reports.length === 0 ? (
+              <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>No reports yet 🎉</div>
+            ) : reports.map(r => (
+              <div key={r.id} style={{ background:r.status==='pending'?"#FFF8F0":C.white, borderBottom:"1px solid #F0EBE8", padding:"14px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:r.status==='pending'?"#E65100":C.muted, fontFamily:sf }}>{r.status==='pending'?'⚠️ PENDING':'✅ RESOLVED'}</span>
+                  <span style={{ fontSize:11, color:C.muted, fontFamily:sf }}>{new Date(r.created_at).toLocaleDateString('en-GB')}</span>
+                </div>
+                <div style={{ fontSize:13, color:C.text, marginBottom:4 }}>
+                  <strong>{r.reporter?.first_name} {r.reporter?.last_name}</strong> reported <strong>{r.reported?.first_name} {r.reported?.last_name}</strong>
+                </div>
+                <div style={{ fontSize:13, color:C.coral, fontWeight:600, marginBottom:4, fontFamily:sf }}>{r.reason}</div>
+                {r.details && <div style={{ fontSize:12, color:C.muted, fontFamily:sf, lineHeight:1.5, marginBottom:8, background:"#F8F6F4", padding:"8px 10px", borderRadius:8 }}>{r.details}</div>}
+                {r.status === 'pending' && (
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={()=>resolveReport(r)} style={{ padding:"6px 14px", borderRadius:20, background:"#E8F5E9", border:"1px solid #A5D6A7", color:"#2E7D32", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>✅ Resolve</button>
+                    <button onClick={async()=>{ const m = members.find(x=>x.id===r.reported_id); if(m) await suspendMember(m); await resolveReport(r); }} style={{ padding:"6px 14px", borderRadius:20, background:"#FFF8E1", border:"1px solid #FFD54F", color:"#F57F17", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>⏸ Suspend & Resolve</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── EVENTS ── */}
+        {!loading && adminTab === 'events' && (
+          <div>
+            <div style={{ padding:"12px 16px", background:C.white, borderBottom:"1px solid #EAE6E2", fontSize:12, color:C.muted, fontFamily:sf }}>{events.length} events</div>
+            {events.length === 0 ? (
+              <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>No events yet</div>
+            ) : events.map(e => (
+              <div key={e.id} style={{ background:C.white, borderBottom:"1px solid #F0EBE8", padding:"14px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                  <div style={{ fontWeight:700, fontSize:14, color:C.text, flex:1 }}>{e.title}</div>
+                  <button onClick={()=>deleteEvent(e)} style={{ padding:"4px 10px", borderRadius:20, background:"#FFEBEE", border:"1px solid #EF9A9A", color:"#C62828", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf, flexShrink:0 }}>🗑 Delete</button>
+                </div>
+                <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{e.location} · {e.date ? new Date(e.date).toLocaleDateString('en-GB') : '—'}</div>
+                {e.description && <div style={{ fontSize:12, color:C.text, fontFamily:sf, marginTop:6, lineHeight:1.5 }}>{e.description.substring(0,100)}{e.description.length>100?'...':''}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── CUSTOM INTERESTS ── */}
+        {!loading && adminTab === 'interests' && (
+          <div>
+            <div style={{ padding:"12px 16px", background:C.white, borderBottom:"1px solid #EAE6E2", fontSize:12, color:C.muted, fontFamily:sf }}>{customInterests.length} community interests submitted</div>
+            {customInterests.length === 0 ? (
+              <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>No community interests yet</div>
+            ) : customInterests.map(ci => (
+              <div key={ci.id} style={{ background:C.white, borderBottom:"1px solid #F0EBE8", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:14, fontWeight:600, color:C.text }}>{ci.interest}</div>
+                  <div style={{ fontSize:11, color:C.muted, fontFamily:sf }}>Added {ci.count} time{ci.count!==1?'s':''} · {ci.approved?'✅ Visible':'🚫 Hidden'}</div>
+                </div>
+                <button onClick={()=>toggleInterestApproval(ci)} style={{ padding:"5px 10px", borderRadius:20, background:ci.approved?"#FFF8E1":"#E8F5E9", border:`1px solid ${ci.approved?"#FFD54F":"#A5D6A7"}`, color:ci.approved?"#F57F17":"#2E7D32", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>
+                  {ci.approved ? 'Hide' : 'Show'}
+                </button>
+                <button onClick={()=>deleteInterest(ci)} style={{ padding:"5px 10px", borderRadius:20, background:"#FFEBEE", border:"1px solid #EF9A9A", color:"#C62828", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>🗑</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Message Member Modal */}
+      {messageTarget && (
+        <div onClick={e=>{if(e.target===e.currentTarget)setMessageTarget(null);}} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:50 }}>
+          <div style={{ background:C.white, borderRadius:"22px 22px 0 0", width:"100%", padding:"20px 20px 36px" }}>
+            <div style={{ width:40, height:4, background:"#DDD", borderRadius:2, margin:"0 auto 16px" }}/>
+            <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:4 }}>Message {messageTarget.first_name}</div>
+            <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginBottom:14 }}>Sent as a direct message from Paul (Next Hello founder)</div>
+            <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>QUICK MESSAGES</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
+              {QUICK_MESSAGES.map((msg, i) => (
+                <div key={i} onClick={()=>setMessageText(msg)} style={{ padding:"9px 12px", borderRadius:12, border:`1.5px solid ${messageText===msg?C.coral:"#DDD8D4"}`, background:messageText===msg?C.coralPale:C.white, fontSize:12, color:C.text, cursor:"pointer", fontFamily:sf, lineHeight:1.5 }}>
+                  {msg.substring(0, 70)}...
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:6 }}>YOUR MESSAGE</div>
+            <textarea value={messageText} onChange={e=>setMessageText(e.target.value)} rows={4} placeholder="Type a message..." style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:13, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.6, marginBottom:12 }}/>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setMessageTarget(null)} style={{ flex:1, padding:"13px", borderRadius:14, background:"none", border:"1.5px solid #DDD8D4", color:C.muted, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Cancel</button>
+              <button onClick={sendAdminMessage} disabled={!messageText.trim()||messageSending} style={{ flex:2, padding:"13px", borderRadius:14, background:messageText.trim()?`linear-gradient(135deg,${C.coral},${C.coralMid})`:C.coralPale, border:"none", color:messageText.trim()?C.white:C.muted, fontSize:14, fontWeight:700, cursor:messageText.trim()?"pointer":"default", fontFamily:sf }}>
+                {messageSending ? "Sending..." : `Send to ${messageTarget.first_name}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <div style={{ position:"absolute", bottom:90, left:"50%", transform:"translateX(-50%)", background:C.dark, color:C.white, padding:"10px 20px", borderRadius:30, fontSize:13, fontWeight:600, whiteSpace:"nowrap", zIndex:20, fontFamily:sf }}>{toast}</div>}
+    </div>
+  );
+}
+
+// ── Help Screen ───────────────────────────────────────────
+const HELP_SYSTEM_PROMPT = `You are Nell, the friendly AI help assistant for Next Hello — a warm, safe dating app built exclusively for the over 50s. Created by Paul Halfpenny, founder.
+
+Your personality: warm, friendly, slightly funny, never patronising.
+
+Key facts:
+- The Hello System: say Hello to someone you like. They say Hello back. Only then can you chat. Say Goodbye if not interested — they never know.
+- VIP Founding Members: anyone joining before 1st June 2026 gets free membership for 12 months
+- After free period: £5/month, cancel anytime
+- Up to 6 photos per profile
+- Events tab: create and browse local events
+- Report & Block: flag icon on any profile
+- Contact: hello@nexthello.co.uk
+
+Keep responses warm, concise and friendly. If unsure, direct to hello@nexthello.co.uk.`;
+
+const SUGGESTED_QUESTIONS = [
+  "How does the Hello system work?",
+  "How do I add more photos?",
+  "What is VIP Founding Member status?",
+  "How do I report someone?",
+  "Can I delete my account?",
+  "How much does it cost?",
+  "How do I create an event?",
+  "Why can't I message someone?",
+];
+
+function HelpScreen({ onBack, currentUser }) {
+  const [messages, setMessages] = useState([
+    { role:'assistant', content:`Hi there! 👋 I'm Nell, your Next Hello helper. I know everything about how the app works — ask me anything!\n\nNot sure where to start? Tap one of the suggestions below, or just type your question. 😊` }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
+
+  const ask = async (question) => {
+    const q = question || input.trim();
+    if (!q) return;
+    setInput('');
+    setLoading(true);
+    const newMessages = [...messages, { role:'user', content:q }];
+    setMessages(newMessages);
+    try {
+      const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system: HELP_SYSTEM_PROMPT,
+          messages: newMessages.map(m => ({ role:m.role, content:m.content })),
+        })
+      });
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || "I'm not sure about that one! Please email hello@nexthello.co.uk and Paul will help you personally. 😊";
+      setMessages(prev => [...prev, { role:'assistant', content:reply }]);
+    } catch(e) {
+      setMessages(prev => [...prev, { role:'assistant', content:"Oops, something went wrong at my end! Please try again or email hello@nexthello.co.uk 😊" }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"14px 20px 20px", flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:10, padding:0 }}>←</button>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🤖</div>
+          <div>
+            <div style={{ fontSize:18, fontWeight:700, color:C.white }}>Nell — Help Assistant</div>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF50" }}/>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", fontFamily:sf }}>Always here to help</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"16px 16px 8px", display:"flex", flexDirection:"column", gap:12 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ display:"flex", justifyContent:m.role==="user"?"flex-end":"flex-start", gap:8, alignItems:"flex-end" }}>
+            {m.role==="assistant" && <div style={{ width:28, height:28, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>🤖</div>}
+            <div style={{ maxWidth:"78%", padding:"11px 14px", borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px", background:m.role==="user"?`linear-gradient(135deg,${C.coral},${C.coralMid})`:C.offWhite, color:m.role==="user"?C.white:C.text, fontSize:14, lineHeight:1.65, fontFamily:sf, whiteSpace:"pre-wrap" }}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display:"flex", alignItems:"flex-end", gap:8 }}>
+            <div style={{ width:28, height:28, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>🤖</div>
+            <div style={{ padding:"12px 16px", borderRadius:"18px 18px 18px 4px", background:C.offWhite, display:"flex", gap:4, alignItems:"center" }}>
+              {[0,1,2].map(i=><div key={i} style={{ width:7, height:7, borderRadius:"50%", background:C.muted }}/>)}
+            </div>
+          </div>
+        )}
+        {messages.length <= 1 && !loading && (
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:4 }}>
+            {SUGGESTED_QUESTIONS.map(q=>(
+              <button key={q} onClick={()=>ask(q)} style={{ padding:"8px 14px", borderRadius:20, border:`1.5px solid ${C.coral}`, background:C.coralPale, color:C.coral, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:sf }}>{q}</button>
+            ))}
+          </div>
+        )}
+        <div ref={bottomRef}/>
+      </div>
+      <div style={{ padding:"10px 14px 24px", borderTop:"1px solid #EAE6E2", display:"flex", gap:8, flexShrink:0 }}>
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!loading&&ask()} placeholder="Ask Nell anything..." style={{ flex:1, padding:"12px 16px", borderRadius:24, border:`1.5px solid #DDD8D4`, outline:"none", fontSize:14, background:C.offWhite, color:C.text, fontFamily:sf }}/>
+        <button onClick={()=>ask()} disabled={!input.trim()||loading} style={{ width:44, height:44, borderRadius:"50%", background:input.trim()&&!loading?C.coral:C.coralPale, border:"none", color:input.trim()&&!loading?C.white:C.muted, fontSize:18, cursor:input.trim()&&!loading?"pointer":"default", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>→</button>
+      </div>
+    </div>
+  );
+}
+
+function RulesScreen({ onBack }) {
+  const Section = ({ title, children }) => (
+    <div style={{ marginBottom:20 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:10, paddingBottom:6, borderBottom:`2px solid ${C.coralPale}` }}>{title.toUpperCase()}</div>
+      {children}
+    </div>
+  );
+  const Rule = ({ title, body }) => (
+    <div style={{ marginBottom:10, paddingLeft:12, borderLeft:`3px solid ${C.coralPale}` }}>
+      <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:2 }}>{title}</div>
+      <div style={{ fontSize:12, color:C.muted, lineHeight:1.6, fontFamily:sf }}>{body}</div>
+    </div>
+  );
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"14px 20px 20px", flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:10, padding:0 }}>←</button>
+        <div style={{ fontSize:22, fontWeight:700, color:C.white }}>Community Guidelines</div>
+        <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", fontFamily:sf, marginTop:4 }}>Next Hello · Effective 1st March 2026</div>
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"20px 20px 40px" }}>
+        <div style={{ background:C.coralPale, borderRadius:14, padding:"14px 16px", marginBottom:20, display:"flex", gap:12, alignItems:"flex-start" }}>
+          <span style={{ fontSize:24 }}>💌</span>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:C.coral, marginBottom:4 }}>My Promise to You</div>
+            <p style={{ fontSize:12, color:C.text, fontFamily:sf, margin:0, lineHeight:1.6 }}>Next Hello was built for people like me — over 50, looking for genuine connection. These guidelines keep our community warm, safe, and honest for everyone.</p>
+            <p style={{ fontSize:12, color:C.muted, fontFamily:sf, margin:"6px 0 0", fontStyle:"italic" }}>— Paul Halfpenny, Founder</p>
+          </div>
+        </div>
+
+        <Section title="The Hello System">
+          <Rule title="💕 Hello" body="Tap Hello to show you're interested. It adds them to your favourites and lets them know."/>
+          <Rule title="👋 Goodbye" body="Tap Goodbye to move on gracefully. The other person is never notified — ever."/>
+          <Rule title="💬 Conversations" body="Chat only opens when BOTH of you have said Hello. If someone Hellos you and you're not interested — simply don't respond. No explanation needed."/>
+          <Rule title="🔄 Repeated Hellos" body="Sending repeated Hellos after no response is considered harassment and may result in suspension."/>
+        </Section>
+
+        <Section title="Community Rules">
+          <Rule title="1. Be Genuine" body="Use your real name, real photos, and honest information. You must be aged 50 or over."/>
+          <Rule title="2. Be Respectful" body="Treat every member with kindness and respect. Offensive or abusive messages result in immediate removal."/>
+          <Rule title="3. Be Safe" body="Never share your home address, financial details, or passwords with another member. Always meet in public first."/>
+          <Rule title="4. Be Honest" body="Do not promote a business or solicit money. Romance scamming results in permanent removal and may be reported to police."/>
+          <Rule title="5. Keep It Legal" body="No illegal, harmful, sexually explicit, or hateful content. No harassment or stalking."/>
+          <Rule title="6. Events" body="Events must be genuinely social and not for personal monetary gain without prior permission from Next Hello."/>
+        </Section>
+
+        <Section title="Reporting & Blocking">
+          <Rule title="🚩 Report" body="Tap the Report button on any profile. All reports go directly to the founder and are reviewed within 24 hours. Completely confidential."/>
+          <Rule title="🚫 Block" body="Block any member instantly. They can never contact you or see your profile. They are never told."/>
+        </Section>
+
+        <Section title="What Happens If You Break the Rules">
+          {[["⚠️ Warning","Private message for minor issues"],["⏸ Suspension","7–30 day removal for repeated issues"],["🚫 Permanent Ban","Immediate removal for scamming, abuse, or illegal content"]].map(([e,b])=>(
+            <Rule key={e} title={e} body={b}/>
+          ))}
+        </Section>
+
+        <Section title="VIP Founding Member Status">
+          <p style={{ fontSize:13, color:C.text, fontFamily:sf, lineHeight:1.7, marginBottom:10 }}>Members who join before 1st June 2026 receive <strong>VIP Founding Member status for one full year</strong> — including free membership.</p>
+          <p style={{ fontSize:13, color:C.text, fontFamily:sf, lineHeight:1.7 }}>This is only removed if you delete your account or break these guidelines. After one year, membership is £5/month — pay as you go, cancel anytime.</p>
+          <p style={{ fontSize:12, color:C.muted, fontFamily:sf, lineHeight:1.6, marginTop:8, fontStyle:"italic" }}>This is my personal promise. — Paul</p>
+        </Section>
+
+        <div style={{ background:C.offWhite, borderRadius:14, padding:"14px 16px", textAlign:"center" }}>
+          <p style={{ fontSize:12, color:C.muted, fontFamily:sf, margin:0, lineHeight:1.6 }}>Questions or concerns?<br/><span style={{ color:C.coral, fontWeight:600 }}>hello@nexthello.co.uk</span></p>
+          <p style={{ fontSize:11, color:"#CCC", fontFamily:sf, margin:"8px 0 0" }}>© 2026 Next Hello. All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Safety Screen ─────────────────────────────────────────
+function SafetyScreen() {
+  const TIPS=[{e:"🛡️",t:"Trust your instincts",b:"If something feels off, it probably is. Don't feel pressured to continue any interaction that makes you uncomfortable."},{e:"🏙️",t:"Meet in public",b:"Always choose a busy, public place for your first few meetings."},{e:"📍",t:"Tell a friend",b:"Let someone you trust know where you're going, who you're meeting, and when you expect to be back."},{e:"🔒",t:"Protect your data",b:"Never share your home address, workplace, financial details, or passwords with someone you've just met."},{e:"🚗",t:"Your own transport",b:"Arrange your own way to and from a date so you're never dependent on someone you've just met."},{e:"📱",t:"Stay charged",b:"Keep your phone charged before a date so you can always call for help if needed."}];
+  return (
+    <div style={{ flex:1, background:C.coralPale, overflow:"auto" }}>
+      <div style={{ padding:"16px 20px 10px" }}><div style={{ fontSize:26, fontWeight:700, color:C.coral }}>Safety Tips</div><div style={{ fontSize:13, color:C.muted, fontFamily:sf, marginTop:2 }}>Your safety is our priority at Next Hello.</div></div>
+      <div style={{ padding:"0 14px 20px", display:"flex", flexDirection:"column", gap:10 }}>
+        {TIPS.map((tip,i)=>(
+          <div key={i} style={{ background:C.white, borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"flex-start", gap:14, boxShadow:"0 1px 6px rgba(0,0,0,0.06)" }}>
+            <div style={{ width:44, height:44, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{tip.e}</div>
+            <div><div style={{ fontWeight:700, fontSize:15, color:C.text, marginBottom:3 }}>{tip.t}</div><div style={{ fontSize:13, color:"#555", lineHeight:1.55, fontFamily:sf }}>{tip.b}</div></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Root App ──────────────────────────────────────────────
+function App() {
+  const [screen, setScreen] = useState("splash");
+  const [tab, setTab] = useState("browse");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [prefs, setPrefs] = useState({ interestedIn:["Everyone"], ageMin:50, ageMax:85, interests:[], gender:'' });
+  const [helloCount, setHelloCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const loadUserPrefs = async (user) => {
+    if (!user) return;
+    const { data: profile } = await db.getProfile(user.id);
+    if (profile) {
+      setPrefs({
+        interestedIn: profile.interested_in || ['Everyone'],
+        ageMin: profile.age_min || 50,
+        ageMax: profile.age_max || 85,
+        interests: profile.interests || [],
+        gender: profile.gender || '',
+      });
+    }
+  };
+
+  useEffect(() => {
+    // Check if already logged in
+    auth.getUser().then(({ data }) => {
+      if (data?.user) { setCurrentUser(data.user); loadUserPrefs(data.user); setScreen("app"); }
+      setLoading(false);
+    });
+    // Listen for auth changes
+    const { data: { subscription } } = auth.onAuthChange((event, session) => {
+      if (session?.user) { setCurrentUser(session.user); loadUserPrefs(session.user); setScreen("app"); }
+      else { setCurrentUser(null); setScreen("splash"); }
+    });
+    return () => subscription?.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await auth.signOut();
+    setCurrentUser(null);
+    setScreen("splash");
+    setTab("browse");
+  };
+
+// ── Photo Upload Screen (mandatory after registration) ────
+function PhotoUploadScreen({ currentUser, onDone }) {
+  const [uploading, setUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const [err, setErr] = useState('');
+  const inputRef = useRef(null);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true); setErr('');
+    try {
+      const url = await window.uploadPhoto(file);
+      await sb.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
+      setPhotoUrl(url);
+    } catch(err) { setErr('Upload failed. Please try again.'); }
+    setUploading(false);
+  };
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"30px 24px 28px" }}>
+        <div style={{ fontSize:26, fontWeight:700, color:C.white, marginBottom:4 }}>Add your photo</div>
+        <div style={{ fontSize:14, color:"rgba(255,255,255,0.8)", fontFamily:sf }}>Members with a photo get 10× more Hellos!</div>
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"24px 28px", display:"flex", flexDirection:"column", gap:20 }}>
+
+        {/* Amusing note */}
+        <div style={{ background:"#FFF8F0", border:"1.5px solid #FFD580", borderRadius:16, padding:"16px 18px" }}>
+          <div style={{ fontSize:13, fontWeight:700, color:"#B8860B", fontFamily:sf, marginBottom:8 }}>📸 A quick note before you upload...</div>
+          <p style={{ fontSize:13, color:"#5D4E00", fontFamily:sf, margin:0, lineHeight:1.75 }}>
+            We'd love to see <strong>YOU</strong> — your actual face, your genuine smile, the real you.<br/><br/>
+            Not your car. Not your cat. Not a sunset from 2003.<br/><br/>
+            This is a dating app, not AutoTrader. And while Whiskers is no doubt adorable, it's <em>you</em> people want to meet.<br/><br/>
+            One clear, recent photo of your lovely face is all we ask. You've got this! 😄
+          </p>
+        </div>
+
+        {/* Photo upload circle */}
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14 }}>
+          <div onClick={()=>inputRef.current?.click()} style={{ width:140, height:140, borderRadius:"50%", border:`3px dashed ${photoUrl?C.coral:"#DDD8D4"}`, background:photoUrl?"transparent":C.offWhite, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", overflow:"hidden", position:"relative" }}>
+            {photoUrl ? (
+              <img src={photoUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt=""/>
+            ) : (
+              <div style={{ textAlign:"center" }}>
+                <div style={{ fontSize:48 }}>📷</div>
+                <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:6 }}>Tap to add photo</div>
+              </div>
+            )}
+            {uploading && (
+              <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <div style={{ fontSize:13, color:C.white, fontFamily:sf }}>Uploading...</div>
+              </div>
+            )}
+          </div>
+          <input ref={inputRef} type="file" accept="image/*" onChange={handleUpload} style={{ display:"none" }}/>
+          {err && <p style={{ fontSize:13, color:C.coral, fontFamily:sf, textAlign:"center" }}>{err}</p>}
+          {photoUrl && (
+            <div style={{ background:"#E8F5E9", borderRadius:14, padding:"10px 16px", display:"flex", gap:8, alignItems:"center" }}>
+              <span style={{ fontSize:18 }}>✅</span>
+              <span style={{ fontSize:13, color:"#2E7D32", fontFamily:sf }}>Looking great! Photo uploaded.</span>
+            </div>
+          )}
+        </div>
+
+        <div style={{ background:C.coralPale, borderRadius:14, padding:"12px 16px" }}>
+          <p style={{ fontSize:12, color:C.coral, fontFamily:sf, margin:0, lineHeight:1.6, textAlign:"center" }}>
+            💡 <strong>Tips:</strong> Good lighting · Face clearly visible · Smiling · Recent photo<br/>
+            Smiling photos get significantly more Hellos — fact! 😊
+          </p>
+        </div>
+      </div>
+      <div style={{ padding:"12px 24px 28px", borderTop:"1px solid #EAE6E2", display:"flex", flexDirection:"column", gap:10 }}>
+        <Btn onClick={onDone} disabled={!photoUrl}>
+          {photoUrl ? "Let's go! →" : "Please add a photo to continue"}
+        </Btn>
+        <button onClick={onDone} style={{ background:"none", border:"none", color:C.muted, fontSize:13, fontFamily:sf, cursor:"pointer", padding:"6px" }}>
+          Skip for now (you can add one later)
+        </button>
+      </div>
+    </div>
+  );
+}
+
+  if (loading) return (
+    <PhoneShell bg={C.dark}>
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
+        <div style={{ display:"flex", gap:3 }}>{[0,1,2].map(i=><div key={i} style={{ width:3.5, height:16, background:C.coral, borderRadius:2 }}/>)}</div>
+        <div style={{ fontSize:13, color:C.muted, fontFamily:sf }}>Loading Next Hello...</div>
+      </div>
+    </PhoneShell>
+  );
+
+  const handleRegisterSuccess = (newPrefs) => {
+    if (newPrefs) setPrefs(newPrefs);
+    setScreen("photo");
+  };
+
+  const darkBg = tab === "browse";
+  const safeBg = tab === "safety";
+
+  if (screen === "splash") return <PhoneShell bg={C.dark}><StatusBar/><SplashScreen onLogin={()=>setScreen("login")} onRegister={()=>setScreen("onboarding-reg")}/></PhoneShell>;
+  if (screen === "onboarding-reg") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("register")} ctaText="Create My Profile →"/></PhoneShell>;
+  if (screen === "login") return <PhoneShell bg={C.white}><StatusBar light/><LoginScreen onBack={()=>setScreen("splash")} onSuccess={()=>setScreen("app")}/></PhoneShell>;
+  if (screen === "register") return <PhoneShell bg={C.white}><StatusBar light/><RegisterScreen onBack={()=>setScreen("splash")} onSuccess={handleRegisterSuccess}/></PhoneShell>;
+  if (screen === "photo") return <PhoneShell bg={C.white}><StatusBar light/><PhotoUploadScreen currentUser={currentUser} onDone={()=>setScreen("onboarding")}/></PhoneShell>;
+  if (screen === "onboarding") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("app")}/></PhoneShell>;
+  if (screen === "rules") return <PhoneShell bg={C.white}><StatusBar light/><RulesScreen onBack={()=>setScreen("app")}/></PhoneShell>;
+  if (screen === "help") return <PhoneShell bg={C.white}><StatusBar light/><HelpScreen onBack={()=>setScreen("app")} currentUser={currentUser}/></PhoneShell>;
+
+  return (
+    <PhoneShell bg={darkBg?C.dark:safeBg?C.coralPale:C.white}>
+      <StatusBar light={!darkBg&&!safeBg}/>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", position:"relative" }}>
+        {tab==="browse" && currentUser?.id && <BrowseScreen currentUser={currentUser} prefs={prefs}/>}
+        {tab==="hellos" && currentUser?.id && <HellosScreen currentUser={currentUser}/>}
+        {tab==="events" && currentUser?.id && <EventsScreen currentUser={currentUser}/>}
+        {tab==="offers" && <OffersScreen/>}
+        {tab==="safety" && <SafetyScreen/>}
+        {tab==="admin" && currentUser?.id && isGodMode(currentUser) && <AdminScreen currentUser={currentUser}/>}
+        {tab==="profile" && currentUser?.id && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")} onViewHelp={()=>setScreen("help")}/>}
+      </div>
+      <BottomNav active={tab} setActive={setTab} darkBg={darkBg} helloCount={helloCount} isFounder={isGodMode(currentUser)}/>
+    </PhoneShell>
+  );
+}
+
+console.log("BUILD: hello-fix-v3 loaded");
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>
 
