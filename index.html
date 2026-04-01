@@ -788,9 +788,13 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
   const [goodbyeIds, setGoodbyeIds] = useState([]);
   const [maybeIds, setMaybeIds] = useState([]);
 
-  useEffect(() => {
+  useEffect(() => { 
     if (currentUser?.id) loadExclusions();
-  }, [currentUser]);
+  }, [currentUser?.id, founderMode]);
+
+  const loadProfiles = async () => {
+    await loadProfilesWithIds(goodbyeIds, maybeIds, favourites);
+  };
 
   const loadExclusions = async () => {
     // Load goodbyes, maybes AND sent hellos simultaneously
@@ -833,13 +837,6 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
             return false;
           });
         }
-        filtered = filtered.filter(p => {
-          const theirInterest = p.interested_in || ['Everyone'];
-          if (theirInterest.includes('Everyone')) return true;
-          if (theirInterest.includes('Men') && (myGender === 'man' || myGender === 'male')) return true;
-          if (theirInterest.includes('Women') && (myGender === 'woman' || myGender === 'female')) return true;
-          return false;
-        });
         filtered = filtered.filter(p => !p.status || p.status === 'active' || p.status === null);
         if (prefs?.ageMin) filtered = filtered.filter(p => !p.age || p.age >= prefs.ageMin);
         if (prefs?.ageMax && prefs.ageMax < 85) filtered = filtered.filter(p => !p.age || p.age <= prefs.ageMax);
@@ -994,10 +991,10 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
           <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12 }}>
             <div style={{ fontSize:36 }}>✨</div>
             <div style={{ fontSize:18, color:C.white, fontWeight:600, textAlign:"center" }}>
-              {profiles.length === 0 ? "Be the first member!" : "You've seen everyone!"}
+              {"No more profiles to show right now."}
             </div>
             <div style={{ fontSize:13, color:C.muted, fontFamily:sf, textAlign:"center", lineHeight:1.6 }}>
-              {profiles.length === 0 ? "Invite friends to join Next Hello." : "Check back soon for new members."}
+              {"Tap refresh to reload, or check your Hello and Maybe lists in the Hellos tab."}
             </div>
             <button onClick={loadProfiles} style={{ marginTop:8, padding:"10px 24px", borderRadius:20, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Refresh</button>
           </div>
