@@ -187,6 +187,8 @@ const Btn = ({ children, onClick, outline, disabled, small }) => (
   <button onClick={onClick} disabled={disabled} style={{ width:"100%", padding:small?"10px 16px":"14px 20px", borderRadius:16, cursor:disabled?"not-allowed":"pointer", background:disabled?"#E8E4E0":outline?"transparent":`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:outline?`2px solid ${C.coral}`:"none", color:disabled?C.muted:outline?C.coral:C.white, fontSize:small?13:15, fontWeight:700, fontFamily:sf, boxShadow:(!outline&&!disabled)?`0 4px 16px rgba(200,97,74,0.35)`:"none", transition:"all 0.2s" }}>{children}</button>
 );
 
+  );
+}
 function PhoneShell({ children, bg=C.dark }) {
   return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
@@ -197,8 +199,7 @@ function PhoneShell({ children, bg=C.dark }) {
     </div>
   );
 }
-
-function StatusBar({ light }) {
+atusBar({ light }) {
   const [time, setTime] = useState(new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
   useEffect(()=>{ const t=setInterval(()=>setTime(new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})),10000); return()=>clearInterval(t); },[]);
   return <div style={{ padding:"14px 24px 4px", display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600, color:light?C.text:C.white, fontFamily:sf }}><span>{time}</span><span>●●● 95%</span></div>;
@@ -793,25 +794,22 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
   }, [currentUser]);
 
   const loadExclusions = async () => {
+    // Load both goodbyes and maybes before profiles to fix race condition
     const [goodbyeRes, maybeRes] = await Promise.all([
       sb.from('goodbyes').select('to_user').eq('from_user', currentUser.id),
       sb.from('maybes').select('to_user').eq('from_user', currentUser.id),
     ]);
-    const gIds = goodbyeRes.data ? goodbyeRes.data.map(g => g.to_user) : [];
-    const mIds = maybeRes.data ? maybeRes.data.map(m => m.to_user) : [];
-    setGoodbyeIds(gIds);
-    setMaybeIds(mIds);
-    // Pass ids directly — avoids race condition with state update
-    loadProfiles(gIds, mIds);
+    if (goodbyeRes.data) setGoodbyeIds(goodbyeRes.data.map(g => g.to_user));
+    if (maybeRes.data) setMaybeIds(maybeRes.data.map(m => m.to_user));
   };
 
   useEffect(() => { loadProfiles(); }, [founderMode, goodbyeIds, maybeIds]);
 
-  const loadProfiles = async (gIds = goodbyeIds, mIds = maybeIds) => {
+  const loadProfiles = async () => {
     setLoading(true);
     const { data } = await db.getProfiles();
     if (data) {
-      let filtered = data.filter(p => p.id !== currentUser?.id && !blockedIds.includes(p.id) && !gIds.includes(p.id) && !mIds.includes(p.id));ds.includes(p.id));
+      let filtered = data.filter(p => p.id !== currentUser?.id && !blockedIds.includes(p.id) && !goodbyeIds.includes(p.id) && !maybeIds.includes(p.id));
       // God Mode: founder sees ALL profiles unfiltered
       if (!isFounder || !founderMode) {
         const myGender = (prefs?.gender || '').toLowerCase();
