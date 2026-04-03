@@ -793,22 +793,25 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
   }, [currentUser]);
 
   const loadExclusions = async () => {
-    // Load both goodbyes and maybes before profiles to fix race condition
     const [goodbyeRes, maybeRes] = await Promise.all([
       sb.from('goodbyes').select('to_user').eq('from_user', currentUser.id),
       sb.from('maybes').select('to_user').eq('from_user', currentUser.id),
     ]);
-    if (goodbyeRes.data) setGoodbyeIds(goodbyeRes.data.map(g => g.to_user));
-    if (maybeRes.data) setMaybeIds(maybeRes.data.map(m => m.to_user));
+    const gIds = goodbyeRes.data ? goodbyeRes.data.map(g => g.to_user) : [];
+    const mIds = maybeRes.data ? maybeRes.data.map(m => m.to_user) : [];
+    setGoodbyeIds(gIds);
+    setMaybeIds(mIds);
+    // Pass ids directly — avoids race condition with state update
+    loadProfiles(gIds, mIds);
   };
 
   useEffect(() => { loadProfiles(); }, [founderMode, goodbyeIds, maybeIds]);
 
-  const loadProfiles = async () => {
+  const loadProfiles = async (gIds = goodbyeIds, mIds = maybeIds) => {
     setLoading(true);
     const { data } = await db.getProfiles();
     if (data) {
-      let filtered = data.filter(p => p.id !== currentUser?.id && !blockedIds.includes(p.id) && !goodbyeIds.includes(p.id) && !maybeIds.includes(p.id));
+      let filtered = data.filter(p => p.id !== currentUser?.id && !blockedIds.includes(p.id) && !gIds.includes(p.id) && !mIds.includes(p.id));ds.includes(p.id));
       // God Mode: founder sees ALL profiles unfiltered
       if (!isFounder || !founderMode) {
         const myGender = (prefs?.gender || '').toLowerCase();
