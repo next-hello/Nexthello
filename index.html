@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Next Hello</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
@@ -187,7 +187,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.36</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.37</div>
       </div>
     </div>
   );
@@ -1048,9 +1048,9 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
 
       {toast && <div style={{ position:"absolute", bottom:90, left:"50%", transform:"translateX(-50%)", background:C.coral, color:C.white, padding:"10px 20px", borderRadius:30, fontSize:13, fontWeight:600, whiteSpace:"nowrap", zIndex:20, fontFamily:sf }}>{toast}</div>}
       {zoomPhoto && (
-        <div onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, cursor:"zoom-out" }}>
+        <div onClick={()=>setZoomPhoto(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, cursor:"zoom-out" }}>
           <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
-          <img src={zoomPhoto} style={{ maxWidth:"95%", maxHeight:"90%", borderRadius:16, objectFit:"contain" }} alt=""/>
+          <img src={zoomPhoto} style={{ maxWidth:"95vw", maxHeight:"90vh", borderRadius:16, objectFit:"contain" }} alt=""/>
         </div>
       )}
     </div>
@@ -1868,10 +1868,10 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
 
       {/* Photo zoom modal */}
       {zoomPhoto && (
-        <div onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:50, cursor:"zoom-out" }}>
+        <div onClick={()=>setZoomPhoto(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, cursor:"zoom-out" }}>
           <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
-          <img src={zoomPhoto} style={{ maxWidth:"95%", maxHeight:"90%", borderRadius:16, objectFit:"contain", boxShadow:"0 8px 40px rgba(0,0,0,0.8)" }} alt=""/>
-          <p style={{ position:"absolute", bottom:20, color:"rgba(255,255,255,0.4)", fontSize:12, fontFamily:sf }}>Tap anywhere to close</p>
+          <img src={zoomPhoto} style={{ maxWidth:"95vw", maxHeight:"90vh", borderRadius:16, objectFit:"contain", boxShadow:"0 8px 40px rgba(0,0,0,0.8)" }} alt=""/>
+          <p style={{ position:"absolute", bottom:20, color:"rgba(255,255,255,0.4)", fontSize:12, fontFamily:"system-ui" }}>Tap anywhere to close</p>
         </div>
       )}
     </div>
