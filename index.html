@@ -187,7 +187,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.35</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.36</div>
       </div>
     </div>
   );
@@ -775,9 +775,10 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [favourites, setFavourites] = useState([]);
-  const [founderMode, setFounderMode] = useState(true); // God Mode ON by default for founder
+  const [founderMode, setFounderMode] = useState(true);
   const [showReportBlock, setShowReportBlock] = useState(false);
   const [blockedIds, setBlockedIds] = useState([]);
+  const [zoomPhoto, setZoomPhoto] = useState(null);
   const isFounder = isGodMode(currentUser);
 
   const [goodbyeIds, setGoodbyeIds] = useState([]);
@@ -996,13 +997,11 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
             </div>
             {profile.photo_url && (
               <div style={{ marginBottom:16 }}>
-                {/* Main photo */}
-                <img src={(profile.photos && profile.photos[0]) || profile.photo_url} alt={profile.first_name} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280 }}/>
-                {/* Additional photos grid */}
+                <img src={(profile.photos && profile.photos[0]) || profile.photo_url} alt={profile.first_name} onClick={()=>setZoomPhoto((profile.photos && profile.photos[0]) || profile.photo_url)} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280, cursor:"zoom-in" }}/>
                 {profile.photos && profile.photos.length > 1 && (
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginTop:6 }}>
                     {profile.photos.slice(1).map((p,i) => (
-                      <img key={i} src={p} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12 }} alt=""/>
+                      <img key={i} src={p} onClick={()=>setZoomPhoto(p)} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12, cursor:"zoom-in" }} alt=""/>
                     ))}
                   </div>
                 )}
@@ -1048,6 +1047,12 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
       )}
 
       {toast && <div style={{ position:"absolute", bottom:90, left:"50%", transform:"translateX(-50%)", background:C.coral, color:C.white, padding:"10px 20px", borderRadius:30, fontSize:13, fontWeight:600, whiteSpace:"nowrap", zIndex:20, fontFamily:sf }}>{toast}</div>}
+      {zoomPhoto && (
+        <div onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, cursor:"zoom-out" }}>
+          <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
+          <img src={zoomPhoto} style={{ maxWidth:"95%", maxHeight:"90%", borderRadius:16, objectFit:"contain" }} alt=""/>
+        </div>
+      )}
     </div>
   );
 }
@@ -1297,12 +1302,12 @@ function HellosScreen({ currentUser }) {
           <div style={{ flex:1, padding:"20px 20px 120px" }}>
             <button onClick={()=>setSelectedMaybeProfile(null)} style={{ background:C.darkCard, border:"none", borderRadius:"50%", width:36, height:36, color:C.white, fontSize:18, cursor:"pointer", marginBottom:16 }}>✕</button>
             {(selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url) && (
-              <img src={selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url} alt={selectedMaybeProfile.first_name} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280, marginBottom:16 }}/>
+              <img src={selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url} alt={selectedMaybeProfile.first_name} onClick={()=>setZoomPhoto(selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url)} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280, marginBottom:16, cursor:"zoom-in" }}/>
             )}
             {selectedMaybeProfile.photos?.length > 1 && (
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginBottom:16 }}>
                 {selectedMaybeProfile.photos.slice(1).map((p,i) => (
-                  <img key={i} src={p} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12 }} alt=""/>
+                  <img key={i} src={p} onClick={()=>setZoomPhoto(p)} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12, cursor:"zoom-in" }} alt=""/>
                 ))}
               </div>
             )}
