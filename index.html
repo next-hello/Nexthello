@@ -187,7 +187,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.37</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.38</div>
       </div>
     </div>
   );
@@ -1072,6 +1072,7 @@ function HellosScreen({ currentUser }) {
   const [tab, setTab] = useState('received'); // received | matches | maybe
   const [maybeProfiles, setMaybeProfiles] = useState([]);
   const [selectedMaybeProfile, setSelectedMaybeProfile] = useState(null);
+  const [zoomPhoto, setZoomPhoto] = useState(null);
   const bottomRef = useRef(null);
 
   useEffect(() => { 
@@ -1298,8 +1299,8 @@ function HellosScreen({ currentUser }) {
 
       {/* Maybe profile detail modal */}
       {selectedMaybeProfile && (
-        <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.92)", display:"flex", flexDirection:"column", zIndex:10, overflow:"auto" }}>
-          <div style={{ flex:1, padding:"20px 20px 120px" }}>
+        <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.92)", display:"flex", flexDirection:"column", zIndex:10 }}>
+          <div style={{ flex:1, overflow:"auto", padding:"20px 20px 16px" }}>
             <button onClick={()=>setSelectedMaybeProfile(null)} style={{ background:C.darkCard, border:"none", borderRadius:"50%", width:36, height:36, color:C.white, fontSize:18, cursor:"pointer", marginBottom:16 }}>✕</button>
             {(selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url) && (
               <img src={selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url} alt={selectedMaybeProfile.first_name} onClick={()=>setZoomPhoto(selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url)} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280, marginBottom:16, cursor:"zoom-in" }}/>
@@ -1314,13 +1315,13 @@ function HellosScreen({ currentUser }) {
             <div style={{ fontSize:26, fontWeight:700, color:C.white }}>{selectedMaybeProfile.first_name}{selectedMaybeProfile.age ? `, ${selectedMaybeProfile.age}` : ''}</div>
             <div style={{ fontSize:13, color:C.muted, marginBottom:12, fontFamily:sf }}>📍 {selectedMaybeProfile.location}</div>
             <p style={{ fontSize:14, color:"rgba(255,255,255,0.8)", lineHeight:1.7, fontFamily:sf, whiteSpace:"pre-wrap" }}>{selectedMaybeProfile.bio}</p>
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:14 }}>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:14, marginBottom:8 }}>
               {(selectedMaybeProfile.interests||[]).map(tag => (
                 <span key={tag} style={{ background:C.coralPale, borderRadius:20, padding:"5px 14px", fontSize:12, color:C.coral, fontWeight:600, fontFamily:sf }}>{tag}</span>
               ))}
             </div>
           </div>
-          <div style={{ padding:"12px 20px 20px", position:"absolute", bottom:0, left:0, right:0, display:"flex", gap:10 }}>
+          <div style={{ padding:"12px 20px 20px", flexShrink:0, display:"flex", gap:10 }}>
             <button onClick={async()=>{
               await sb.from('maybes').delete().eq('from_user',currentUser.id).eq('to_user',selectedMaybeProfile.id);
               setMaybeProfiles(prev=>prev.filter(x=>x.id!==selectedMaybeProfile.id));
@@ -1333,6 +1334,14 @@ function HellosScreen({ currentUser }) {
               setSelectedMaybeProfile(null);
             }} style={{ flex:2, padding:"14px", borderRadius:18, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💕 Hello to {selectedMaybeProfile.first_name}</button>
           </div>
+        </div>
+      )}
+
+      {/* Zoom modal for Maybe profile photos */}
+      {zoomPhoto && (
+        <div onClick={()=>setZoomPhoto(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, cursor:"zoom-out" }}>
+          <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
+          <img src={zoomPhoto} style={{ maxWidth:"95vw", maxHeight:"90vh", borderRadius:16, objectFit:"contain" }} alt=""/>
         </div>
       )}
     </div>
