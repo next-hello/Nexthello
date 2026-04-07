@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.41</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.42</div>
       </div>
     </div>
   );
@@ -2448,6 +2448,7 @@ function PhotoUploadScreen({ currentUser, onDone }) {
   const [uploading, setUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [err, setErr] = useState('');
+  const [creating, setCreating] = useState(false);
   const inputRef = useRef(null);
 
   const handleUpload = async (e) => {
@@ -2460,6 +2461,57 @@ function PhotoUploadScreen({ currentUser, onDone }) {
       setPhotoUrl(url);
     } catch(err) { setErr('Upload failed. Please try again.'); }
     setUploading(false);
+  };
+
+  const handleCreateProfile = async () => {
+    setCreating(true);
+    // Fetch profile to get name/email for notifications
+    try {
+      const { data: profile } = await sb.from('profiles').select('first_name, last_name, age').eq('id', currentUser.id).single();
+      const firstName = profile?.first_name || '';
+      const lastName = profile?.last_name || '';
+      const age = profile?.age || 'not provided';
+      const email = currentUser.email;
+      const isFoundingMember = new Date() < new Date('2026-06-01');
+      const signupTime = new Date().toLocaleString('en-GB', { dateStyle:'full', timeStyle:'short' });
+      // Welcome email
+      window.sendEmail(
+        email,
+        `Welcome to Next Hello, ${firstName}! 💕`,
+        `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+          <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
+          <div style="font-size:36px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
+          <p style="font-size:19px;color:#F0DDD4;margin-bottom:6px;">Hi ${firstName}! 👋</p>
+          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">Welcome to Next Hello — and congratulations on being one of our very first members! 🎉</p>
+          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">I'm Paul, the founder. Not a faceless corporation with a ping pong table and a juice bar. Just someone who got fed up with expensive, impersonal dating sites and decided to do something about it.</p>
+          ${isFoundingMember ? `<div style="background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);border-radius:12px;padding:14px 18px;margin-bottom:16px;"><p style="font-size:14px;color:#FFD700;margin:0;line-height:1.7;">👑 <strong>You're a VIP Founding Member</strong> — Next Hello is completely free for you for a full 12 months.</p></div>` : ''}
+          <p style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.8;margin-bottom:16px;">
+            📸 <strong style="color:#fff;">Add more photos</strong> in your profile<br/>
+            💕 <strong style="color:#fff;">Browse and say Hello</strong> to anyone who catches your eye<br/>
+            👋 <strong style="color:#fff;">Not interested?</strong> Just say Goodbye — they'll never know<br/>
+            🎉 <strong style="color:#fff;">Check out Events</strong> — meet members in real life
+          </p>
+          <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
+          <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong><br/><span style="font-size:12px;color:rgba(255,255,255,0.45);">Founder, Next Hello</span></p>
+        </div>`
+      ).catch(e => console.log('Welcome email failed:', e));
+      // Admin notification
+      window.sendEmail(
+        'pbhalfpenny@icloud.com',
+        `🎉 New member joined Next Hello`,
+        `<div style="font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:28px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+          <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
+          <div style="font-size:28px;font-weight:700;color:#FAFAF8;margin-bottom:20px;">New Member Alert 🎉</div>
+          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Name:</strong> ${firstName} ${lastName}</p>
+          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Email:</strong> ${email}</p>
+          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Age:</strong> ${age}</p>
+          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Signed up:</strong> ${signupTime}</p>
+          ${isFoundingMember ? `<p style="font-size:14px;color:#FFD700;margin-top:12px;">👑 VIP Founding Member</p>` : ''}
+        </div>`
+      ).catch(e => console.log('Admin notification failed:', e));
+    } catch(e) { console.log('Profile fetch for email failed:', e); }
+    setCreating(false);
+    onDone();
   };
 
   return (
@@ -2516,8 +2568,8 @@ function PhotoUploadScreen({ currentUser, onDone }) {
         </div>
       </div>
       <div style={{ padding:"12px 24px 28px", borderTop:"1px solid #EAE6E2", display:"flex", flexDirection:"column", gap:10 }}>
-        <Btn onClick={onDone} disabled={!photoUrl}>
-          {photoUrl ? "Let's go! →" : "Please add a photo to continue"}
+        <Btn onClick={photoUrl ? handleCreateProfile : null} disabled={!photoUrl || creating}>
+          {creating ? "Creating your profile..." : photoUrl ? "Create Profile →" : "Please add a photo to continue"}
         </Btn>
         <button onClick={onDone} style={{ background:"none", border:"none", color:C.muted, fontSize:13, fontFamily:sf, cursor:"pointer", padding:"6px" }}>
           Skip for now (you can add one later)
@@ -2548,7 +2600,7 @@ function PhotoUploadScreen({ currentUser, onDone }) {
   if (screen === "onboarding-reg") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("register")} ctaText="Create My Profile →"/></PhoneShell>;
   if (screen === "login") return <PhoneShell bg={C.white}><StatusBar light/><LoginScreen onBack={()=>setScreen("splash")} onSuccess={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "register") return <PhoneShell bg={C.white}><StatusBar light/><RegisterScreen onBack={()=>setScreen("splash")} onSuccess={handleRegisterSuccess}/></PhoneShell>;
-  if (screen === "photo") return <PhoneShell bg={C.white}><StatusBar light/><PhotoUploadScreen currentUser={currentUser} onDone={()=>setScreen("onboarding")}/></PhoneShell>;
+  if (screen === "photo") return <PhoneShell bg={C.white}><StatusBar light/><PhotoUploadScreen currentUser={currentUser} onDone={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "onboarding") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "rules") return <PhoneShell bg={C.white}><StatusBar light/><RulesScreen onBack={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "help") return <PhoneShell bg={C.white}><StatusBar light/><HelpScreen onBack={()=>setScreen("app")} currentUser={currentUser}/></PhoneShell>;
