@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="description" content="Next Hello is a totally free dating site for over 50s in the UK. No subscriptions, no hidden costs – just real people looking for genuine connections near you.">
-<meta charset="UTF-8">
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Next Hello – Free Dating Site for Over 50s | UK | No Subscription</title>
+<title>Next Hello</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
@@ -188,7 +187,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.34</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.35</div>
       </div>
     </div>
   );
@@ -1067,6 +1066,7 @@ function HellosScreen({ currentUser }) {
   const [showIce, setShowIce] = useState(false);
   const [tab, setTab] = useState('received'); // received | matches | maybe
   const [maybeProfiles, setMaybeProfiles] = useState([]);
+  const [selectedMaybeProfile, setSelectedMaybeProfile] = useState(null);
   const bottomRef = useRef(null);
 
   useEffect(() => { 
@@ -1248,13 +1248,13 @@ function HellosScreen({ currentUser }) {
               {maybeProfiles.map(p => {
                 const photo = p.photos?.[0] || p.photo_url;
                 return (
-                  <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8" }}>
+                  <div key={p.id} onClick={()=>setSelectedMaybeProfile(p)} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8", cursor:"pointer" }}>
                     {photo ? <img src={photo} style={{ width:50, height:50, borderRadius:"50%", objectFit:"cover" }} alt=""/> : <div style={{ width:50, height:50, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>👤</div>}
                     <div style={{ flex:1 }}>
                       <div style={{ fontWeight:700, fontSize:15, color:C.text }}>{p.first_name}{p.age ? `, ${p.age}` : ''}</div>
                       <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{p.location || ''}</div>
                     </div>
-                    <button onClick={async()=>{ await sb.rpc('send_hello',{p_from:currentUser.id,p_to:p.id}); await sb.from('maybes').delete().eq('from_user',currentUser.id).eq('to_user',p.id); setMaybeProfiles(prev=>prev.filter(x=>x.id!==p.id)); showToast && showToast(`Hello sent to ${p.first_name}! 💕`); }} style={{ padding:"8px 14px", borderRadius:20, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💕 Hello</button>
+                    <span style={{ fontSize:12, color:C.muted, fontFamily:sf }}>View →</span>
                   </div>
                 );
               })}
@@ -1290,6 +1290,46 @@ function HellosScreen({ currentUser }) {
           );
         })}
       </div>
+
+      {/* Maybe profile detail modal */}
+      {selectedMaybeProfile && (
+        <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.92)", display:"flex", flexDirection:"column", zIndex:10, overflow:"auto" }}>
+          <div style={{ flex:1, padding:"20px 20px 120px" }}>
+            <button onClick={()=>setSelectedMaybeProfile(null)} style={{ background:C.darkCard, border:"none", borderRadius:"50%", width:36, height:36, color:C.white, fontSize:18, cursor:"pointer", marginBottom:16 }}>✕</button>
+            {(selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url) && (
+              <img src={selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url} alt={selectedMaybeProfile.first_name} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280, marginBottom:16 }}/>
+            )}
+            {selectedMaybeProfile.photos?.length > 1 && (
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginBottom:16 }}>
+                {selectedMaybeProfile.photos.slice(1).map((p,i) => (
+                  <img key={i} src={p} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12 }} alt=""/>
+                ))}
+              </div>
+            )}
+            <div style={{ fontSize:26, fontWeight:700, color:C.white }}>{selectedMaybeProfile.first_name}{selectedMaybeProfile.age ? `, ${selectedMaybeProfile.age}` : ''}</div>
+            <div style={{ fontSize:13, color:C.muted, marginBottom:12, fontFamily:sf }}>📍 {selectedMaybeProfile.location}</div>
+            <p style={{ fontSize:14, color:"rgba(255,255,255,0.8)", lineHeight:1.7, fontFamily:sf, whiteSpace:"pre-wrap" }}>{selectedMaybeProfile.bio}</p>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:14 }}>
+              {(selectedMaybeProfile.interests||[]).map(tag => (
+                <span key={tag} style={{ background:C.coralPale, borderRadius:20, padding:"5px 14px", fontSize:12, color:C.coral, fontWeight:600, fontFamily:sf }}>{tag}</span>
+              ))}
+            </div>
+          </div>
+          <div style={{ padding:"12px 20px 20px", position:"absolute", bottom:0, left:0, right:0, display:"flex", gap:10 }}>
+            <button onClick={async()=>{
+              await sb.from('maybes').delete().eq('from_user',currentUser.id).eq('to_user',selectedMaybeProfile.id);
+              setMaybeProfiles(prev=>prev.filter(x=>x.id!==selectedMaybeProfile.id));
+              setSelectedMaybeProfile(null);
+            }} style={{ flex:1, padding:"14px", borderRadius:18, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:sf }}>🗑 Remove</button>
+            <button onClick={async()=>{
+              await sb.rpc('send_hello',{p_from:currentUser.id,p_to:selectedMaybeProfile.id});
+              await sb.from('maybes').delete().eq('from_user',currentUser.id).eq('to_user',selectedMaybeProfile.id);
+              setMaybeProfiles(prev=>prev.filter(x=>x.id!==selectedMaybeProfile.id));
+              setSelectedMaybeProfile(null);
+            }} style={{ flex:2, padding:"14px", borderRadius:18, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💕 Hello to {selectedMaybeProfile.first_name}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
