@@ -187,7 +187,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.39</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.40</div>
       </div>
     </div>
   );
@@ -338,12 +338,11 @@ function RegisterScreen({ onBack, onSuccess }) {
         if (profileError) {
           localStorage.setItem('nh_pending_profile', JSON.stringify(profileData));
         }
-        // Send welcome email
-        try {
-          await window.sendEmail(
-            d.email,
-            `Welcome to Next Hello, ${d.firstName}! 💕`,
-            `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+        // Send welcome email — fire and forget, never block signup
+        window.sendEmail(
+          d.email,
+          `Welcome to Next Hello, ${d.firstName}! 💕`,
+          `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
               <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
               <div style="font-size:36px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
               <p style="font-size:19px;color:#F0DDD4;margin-bottom:6px;">Hi ${d.firstName}! 👋</p>
@@ -361,16 +360,14 @@ function RegisterScreen({ onBack, onSuccess }) {
               <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
               <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong><br/><span style="font-size:12px;color:rgba(255,255,255,0.45);">Founder, Next Hello</span></p>
             </div>`
-          );
-        } catch(emailErr) { console.log('Welcome email failed:', emailErr); }
-        // Admin notification
-        try {
-          const signupTime = new Date().toLocaleString('en-GB', { dateStyle:'full', timeStyle:'short' });
-          const age = d.dob ? new Date().getFullYear() - new Date(d.dob).getFullYear() : 'not provided';
-          await window.sendEmail(
-            'pbhalfpenny@icloud.com',
-            `🎉 New member joined Next Hello`,
-            `<div style="font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:28px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+        ).catch(e => console.log('Welcome email failed:', e));
+        // Admin notification — fire and forget, never block signup
+        const signupTime = new Date().toLocaleString('en-GB', { dateStyle:'full', timeStyle:'short' });
+        const age = d.dob ? new Date().getFullYear() - new Date(d.dob).getFullYear() : 'not provided';
+        window.sendEmail(
+          'pbhalfpenny@icloud.com',
+          `🎉 New member joined Next Hello`,
+          `<div style="font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:28px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
               <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
               <div style="font-size:28px;font-weight:700;color:#FAFAF8;margin-bottom:20px;">New Member Alert 🎉</div>
               <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Name:</strong> ${d.firstName} ${d.lastName || ''}</p>
@@ -379,8 +376,7 @@ function RegisterScreen({ onBack, onSuccess }) {
               <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Signed up:</strong> ${signupTime}</p>
               ${isFoundingMember ? `<p style="font-size:14px;color:#FFD700;margin-top:12px;">👑 VIP Founding Member</p>` : ''}
             </div>`
-          );
-        } catch(adminEmailErr) { console.log('Admin notification failed:', adminEmailErr); }
+        ).catch(e => console.log('Admin notification failed:', e));
       } else {
         const profileData = {
           first_name: d.firstName, last_name: d.lastName,
