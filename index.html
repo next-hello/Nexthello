@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.62</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.63</div>
       </div>
     </div>
   );
@@ -1160,10 +1160,17 @@ function HellosScreen({ currentUser }) {
 
   const loadFounderMessages = async () => {
     if (!currentUser?.id) return;
-    const { data } = await sb.from('messages').select('*')
-      .or(`and(sender_id.eq.${FOUNDER_ID},recipient_id.eq.${currentUser.id}),and(sender_id.eq.${currentUser.id},recipient_id.eq.${FOUNDER_ID})`)
+    const { data, error } = await sb.from('messages').select('*')
+      .or(`sender_id.eq.${FOUNDER_ID},recipient_id.eq.${FOUNDER_ID}`)
       .order('created_at', { ascending: true });
-    if (data) setFounderMessages(data);
+    if (error) { console.error('loadFounderMessages error:', error); return; }
+    if (data) {
+      const filtered = data.filter(m =>
+        (m.sender_id === FOUNDER_ID && m.recipient_id === currentUser.id) ||
+        (m.sender_id === currentUser.id && m.recipient_id === FOUNDER_ID)
+      );
+      setFounderMessages(filtered);
+    }
   };
 
   const sendFounderReply = async () => {
