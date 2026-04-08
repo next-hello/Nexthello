@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.50</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.51</div>
       </div>
     </div>
   );
@@ -232,13 +232,24 @@ function LoginScreen({ onBack, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
 
   const submit = async () => {
     if (!email||!pass) { setErr('Please fill in all fields.'); return; }
     setLoading(true); setErr('');
     const { error } = await auth.signIn(email, pass);
     if (error) { setErr(error.message); setLoading(false); }
-    else onSuccess();
+    else {
+      // Store remember me preference
+      if (rememberMe) {
+        localStorage.setItem('nh_remember_me', '1');
+      } else {
+        localStorage.removeItem('nh_remember_me');
+        // Sign out when tab/window closes if not remembering
+        window.addEventListener('beforeunload', () => sb.auth.signOut(), { once: true });
+      }
+      onSuccess();
+    }
   };
 
   const sendReset = async () => {
@@ -263,8 +274,12 @@ function LoginScreen({ onBack, onSuccess }) {
         <InputField label="PASSWORD" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Your password"/>
         {err && <p style={{ color:C.coral, fontSize:13, fontFamily:sf, marginBottom:10 }}>{err}</p>}
         {resetSent && <div style={{ background:"#E8F5E9", borderRadius:12, padding:"12px 16px", marginBottom:16 }}><p style={{ color:"#2E7D32", fontSize:13, fontFamily:sf, margin:0 }}>✅ Password reset email sent! Check your inbox.</p></div>}
-        <div style={{ textAlign:"right", marginBottom:20 }}>
+        <div style={{ textAlign:"right", marginBottom:16 }}>
           <span onClick={sendReset} style={{ fontSize:13, color:C.coral, fontFamily:sf, cursor:"pointer" }}>Forgot password? Tap to reset</span>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20 }}>
+          <input type="checkbox" id="rememberMe" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)} style={{ width:18, height:18, accentColor:C.coral, cursor:"pointer" }}/>
+          <label htmlFor="rememberMe" style={{ fontSize:13, color:C.muted, fontFamily:sf, cursor:"pointer" }}>Remember me</label>
         </div>
         <Btn onClick={submit} disabled={loading}>{loading ? "Signing in..." : "Sign In"}</Btn>
       </div>
