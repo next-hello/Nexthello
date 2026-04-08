@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.63</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.64</div>
       </div>
     </div>
   );
@@ -1160,17 +1160,22 @@ function HellosScreen({ currentUser }) {
 
   const loadFounderMessages = async () => {
     if (!currentUser?.id) return;
-    const { data, error } = await sb.from('messages').select('*')
-      .or(`sender_id.eq.${FOUNDER_ID},recipient_id.eq.${FOUNDER_ID}`)
+    // Fetch in two separate queries — avoids compound OR issues with RLS
+    const { data: received, error: e1 } = await sb.from('messages').select('*')
+      .eq('sender_id', FOUNDER_ID)
+      .eq('recipient_id', currentUser.id)
       .order('created_at', { ascending: true });
-    if (error) { console.error('loadFounderMessages error:', error); return; }
-    if (data) {
-      const filtered = data.filter(m =>
-        (m.sender_id === FOUNDER_ID && m.recipient_id === currentUser.id) ||
-        (m.sender_id === currentUser.id && m.recipient_id === FOUNDER_ID)
-      );
-      setFounderMessages(filtered);
-    }
+    if (e1) console.error('loadFounderMessages received error:', e1);
+
+    const { data: sent, error: e2 } = await sb.from('messages').select('*')
+      .eq('sender_id', currentUser.id)
+      .eq('recipient_id', FOUNDER_ID)
+      .order('created_at', { ascending: true });
+    if (e2) console.error('loadFounderMessages sent error:', e2);
+
+    const combined = [...(received || []), ...(sent || [])]
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    setFounderMessages(combined);
   };
 
   const sendFounderReply = async () => {
@@ -1323,7 +1328,7 @@ function HellosScreen({ currentUser }) {
         <div style={{ fontSize:24, fontWeight:700, color:C.coral }}>Hellos</div>
         {/* Tabs */}
         <div style={{ display:"flex", gap:8, marginTop:10, overflowX:"auto", scrollbarWidth:"none" }}>
-          {[['received','👋 Received'],['matches','💕 Matches'],['maybe','🤔 Maybe'],['nexthello','📩 Next Hello']].map(([id,label]) => (
+          {[['received','👋 Received'],['matches','💕 Matches'],['maybe','🤔 Maybe'],['nexthello','📩 Founder']].map(([id,label]) => (
             <button key={id} onClick={()=>setTab(id)} style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${tab===id?C.coral:"#DDD8D4"}`, background:tab===id?C.coralPale:C.white, color:tab===id?C.coral:C.muted, fontSize:12, fontWeight:tab===id?700:400, cursor:"pointer", fontFamily:sf, flexShrink:0 }}>
               {label} {id==='matches' && mutualHellos.length > 0 ? `(${mutualHellos.length})` : id==='received' && hellos.length > 0 ? `(${hellos.length})` : id==='maybe' && maybeProfiles.length > 0 ? `(${maybeProfiles.length})` : id==='nexthello' && founderMessages.length > 0 ? `(${founderMessages.length})` : ''}
             </button>
