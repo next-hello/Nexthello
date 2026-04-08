@@ -110,7 +110,7 @@ const auth = {
 const db = {
   saveProfile: (profile) => sb.from('profiles').upsert(profile),
   getProfiles: () => sb.from('profiles').select('*'),
-  getProfile: (id) => sb.from('profiles').select('*').eq('id', id).single(),
+  getProfile: (id) => sb.from('profiles').select('*').eq('id', id).maybeSingle(),
   getMessages: (userId, otherId) => sb.from('messages').select('*')
     .or(`and(sender_id.eq.${userId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${userId})`)
     .order('created_at', { ascending: true }),
@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.47</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.48</div>
       </div>
     </div>
   );
