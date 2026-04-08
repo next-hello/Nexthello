@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.60</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.62</div>
       </div>
     </div>
   );
@@ -1101,9 +1101,12 @@ function HellosScreen({ currentUser }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [icebreakers, setIcebreakers] = useState([]);
   const [showIce, setShowIce] = useState(false);
-  const [tab, setTab] = useState('received'); // received | matches | maybe
+  const [tab, setTab] = useState('received'); // received | matches | maybe | nexthello
   const [maybeProfiles, setMaybeProfiles] = useState([]);
   const [selectedMaybeProfile, setSelectedMaybeProfile] = useState(null);
+  const [founderMessages, setFounderMessages] = useState([]);
+  const [founderInput, setFounderInput] = useState('');
+  const [founderThreadOpen, setFounderThreadOpen] = useState(false);
   const [zoomPhoto, setZoomPhoto] = useState(null);
   const bottomRef = useRef(null);
 
@@ -1111,6 +1114,7 @@ function HellosScreen({ currentUser }) {
     if (currentUser?.id) {
       loadHellos();
       loadMaybes();
+      loadFounderMessages();
     }
   }, [currentUser?.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages.length]);
@@ -1150,6 +1154,24 @@ function HellosScreen({ currentUser }) {
       }
     } catch(e) { console.error('loadHellos error:', e); }
     setLoading(false);
+  };
+
+  const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
+
+  const loadFounderMessages = async () => {
+    if (!currentUser?.id) return;
+    const { data } = await sb.from('messages').select('*')
+      .or(`and(sender_id.eq.${FOUNDER_ID},recipient_id.eq.${currentUser.id}),and(sender_id.eq.${currentUser.id},recipient_id.eq.${FOUNDER_ID})`)
+      .order('created_at', { ascending: true });
+    if (data) setFounderMessages(data);
+  };
+
+  const sendFounderReply = async () => {
+    if (!founderInput.trim() || !currentUser) return;
+    const msg = { sender_id: currentUser.id, recipient_id: FOUNDER_ID, text: founderInput.trim(), read: false };
+    await db.sendMessage(msg);
+    setFounderMessages(prev => [...prev, { ...msg, created_at: new Date().toISOString() }]);
+    setFounderInput('');
   };
 
   const openConvo = async (hello, mutual) => {
@@ -1200,6 +1222,33 @@ function HellosScreen({ currentUser }) {
 
   const getProfilePhoto = (hello) => hello?.sender?.photo_url || (hello?.sender?.photos && hello?.sender?.photos[0]) || null;
   const getProfileName = (hello) => hello?.sender?.first_name || "Member";
+
+  if (founderThreadOpen) return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
+      <div style={{ padding:"10px 16px", borderBottom:"1px solid #EAE6E2", display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={()=>setFounderThreadOpen(false)} style={{ background:"none", border:"none", cursor:"pointer", color:C.coral, fontSize:20 }}>←</button>
+        <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#FFD700,#FFA500)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>👑</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontWeight:700, fontSize:15, color:C.text }}>Next Hello</div>
+          <div style={{ fontSize:11, color:C.coral, fontFamily:sf }}>Message from the founder</div>
+        </div>
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:8 }}>
+        {founderMessages.length === 0 ? (
+          <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>No messages yet from Next Hello.</div>
+        ) : founderMessages.map((m,i) => (
+          <div key={i} style={{ display:"flex", justifyContent:m.sender_id===currentUser?.id?"flex-end":"flex-start" }}>
+            <div style={{ maxWidth:"78%", padding:"10px 14px", borderRadius:m.sender_id===currentUser?.id?"18px 18px 4px 18px":"18px 18px 18px 4px", background:m.sender_id===currentUser?.id?`linear-gradient(135deg,${C.coral},${C.coralMid})`:m.text.startsWith('👑')?'linear-gradient(135deg,#FFF9E0,#FFF3C0)':C.offWhite, color:m.sender_id===currentUser?.id?C.white:C.text, fontSize:14, lineHeight:1.6, fontFamily:sf, border:m.sender_id!==currentUser?.id&&m.text.startsWith('👑')?'1px solid #FFD700':undefined, whiteSpace:"pre-wrap" }}>{m.text}</div>
+          </div>
+        ))}
+        <div ref={bottomRef}/>
+      </div>
+      <div style={{ padding:"10px 14px 20px", borderTop:"1px solid #EAE6E2", display:"flex", gap:8 }}>
+        <input value={founderInput} onChange={e=>setFounderInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendFounderReply()} placeholder="Reply to Next Hello..." style={{ flex:1, padding:"11px 16px", borderRadius:24, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, fontFamily:sf }}/>
+        <button onClick={sendFounderReply} style={{ width:42, height:42, borderRadius:"50%", background:C.coral, border:"none", color:C.white, fontSize:16, cursor:"pointer" }}>→</button>
+      </div>
+    </div>
+  );
 
   if (active) return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
@@ -1267,9 +1316,9 @@ function HellosScreen({ currentUser }) {
         <div style={{ fontSize:24, fontWeight:700, color:C.coral }}>Hellos</div>
         {/* Tabs */}
         <div style={{ display:"flex", gap:8, marginTop:10, overflowX:"auto", scrollbarWidth:"none" }}>
-          {[['received','👋 Received'],['matches','💕 Matches'],['maybe','🤔 Maybe']].map(([id,label]) => (
+          {[['received','👋 Received'],['matches','💕 Matches'],['maybe','🤔 Maybe'],['nexthello','📩 Next Hello']].map(([id,label]) => (
             <button key={id} onClick={()=>setTab(id)} style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${tab===id?C.coral:"#DDD8D4"}`, background:tab===id?C.coralPale:C.white, color:tab===id?C.coral:C.muted, fontSize:12, fontWeight:tab===id?700:400, cursor:"pointer", fontFamily:sf, flexShrink:0 }}>
-              {label} {id==='matches' && mutualHellos.length > 0 ? `(${mutualHellos.length})` : id==='received' && hellos.length > 0 ? `(${hellos.length})` : id==='maybe' && maybeProfiles.length > 0 ? `(${maybeProfiles.length})` : ''}
+              {label} {id==='matches' && mutualHellos.length > 0 ? `(${mutualHellos.length})` : id==='received' && hellos.length > 0 ? `(${hellos.length})` : id==='maybe' && maybeProfiles.length > 0 ? `(${maybeProfiles.length})` : id==='nexthello' && founderMessages.length > 0 ? `(${founderMessages.length})` : ''}
             </button>
           ))}
         </div>
@@ -1277,6 +1326,17 @@ function HellosScreen({ currentUser }) {
       <div style={{ flex:1, overflow:"auto" }}>
         {loading ? (
           <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>Loading...</div>
+        ) : tab === 'nexthello' ? (
+          <div onClick={()=>setFounderThreadOpen(true)} style={{ display:"flex", alignItems:"center", gap:12, padding:"16px 18px", borderBottom:"1px solid #F0EBE8", cursor:"pointer", background:"linear-gradient(135deg,#FFFDF0,#FFF9E0)" }}>
+            <div style={{ width:50, height:50, borderRadius:"50%", background:"linear-gradient(135deg,#FFD700,#FFA500)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>👑</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:700, fontSize:15, color:C.text }}>Next Hello</div>
+              <div style={{ fontSize:13, color:C.muted, fontFamily:sf }}>
+                {founderMessages.length > 0 ? founderMessages[founderMessages.length-1].text.replace(/👑 Message from Next Hello founder:\n\n/,'').substring(0,60)+'…' : 'Messages from the founder'}
+              </div>
+            </div>
+            <div style={{ fontSize:12, color:C.coral, fontFamily:sf, fontWeight:600 }}>{founderMessages.length > 0 ? `${founderMessages.length} msg${founderMessages.length>1?'s':''}` : ''}</div>
+          </div>
         ) : tab === 'maybe' ? (
           maybeProfiles.length === 0 ? (
             <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>🤔 No Maybe profiles yet.<br/>Tap Maybe when browsing to save profiles for later.</div>
