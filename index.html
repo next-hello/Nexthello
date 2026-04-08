@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.55</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.56</div>
       </div>
     </div>
   );
@@ -1568,7 +1568,7 @@ function OffersScreen() {
   );
 }
 
-function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onPrefsUpdated }) {
+function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onPrefsUpdated, onViewSuggestions }) {
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
@@ -1781,6 +1781,15 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onPre
               <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>How Next Hello works · Your rights · Our promises</div>
             </div>
             <div style={{ marginLeft:"auto", fontSize:18, color:C.coral }}>›</div>
+          </div>
+
+          <div onClick={onViewSuggestions} style={{ marginTop:10, background:"#F0F4FF", border:"1.5px solid #B0C4FF", borderRadius:16, padding:"14px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:40, height:40, borderRadius:"50%", background:"#5C7CFF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>💡</div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color:"#3D5AFE" }}>Suggestions & Feedback</div>
+              <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>Got an idea? Paul reads every message personally</div>
+            </div>
+            <div style={{ marginLeft:"auto", fontSize:18, color:"#5C7CFF" }}>›</div>
           </div>
 
           {/* Danger zone */}
@@ -2440,6 +2449,68 @@ function HelpScreen({ onBack, currentUser }) {
   );
 }
 
+function SuggestionsScreen({ onBack, currentUser }) {
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
+
+  const send = async () => {
+    if (!text.trim()) return;
+    setSending(true);
+    try {
+      await sb.from('messages').insert({
+        sender_id: currentUser.id,
+        recipient_id: FOUNDER_ID,
+        text: `💡 Suggestion from ${currentUser.email}:\n\n${text.trim()}`,
+        read: false,
+      });
+      setSent(true);
+      setText('');
+    } catch(e) { alert('Failed to send. Please try again.'); }
+    setSending(false);
+  };
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"14px 20px 24px", flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:10, padding:0 }}>←</button>
+        <div style={{ fontSize:22, fontWeight:700, color:C.white }}>Suggestions</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.8)", fontFamily:sf, marginTop:4 }}>Help us improve Next Hello</div>
+      </div>
+      <div style={{ flex:1, overflow:"auto", padding:"24px 20px" }}>
+        <div style={{ background:C.coralPale, borderRadius:14, padding:"14px 16px", marginBottom:20 }}>
+          <p style={{ fontSize:13, color:C.coral, fontFamily:sf, margin:0, lineHeight:1.7 }}>
+            💡 Got an idea, spotted a bug, or just want to say something? Paul reads every message personally. Nothing is too small.
+          </p>
+        </div>
+        {sent ? (
+          <div style={{ background:"#E8F5E9", borderRadius:16, padding:"24px 20px", textAlign:"center" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>💕</div>
+            <div style={{ fontSize:16, fontWeight:700, color:"#2E7D32", marginBottom:8 }}>Thank you!</div>
+            <div style={{ fontSize:13, color:"#388E3C", fontFamily:sf, lineHeight:1.7 }}>Your suggestion has been sent to Paul. We really appreciate you taking the time. One Hello can change everything — and so can one good idea.</div>
+            <button onClick={()=>setSent(false)} style={{ marginTop:16, padding:"10px 24px", borderRadius:20, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf }}>Send another</button>
+          </div>
+        ) : (
+          <>
+            <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>YOUR SUGGESTION</label>
+            <textarea
+              value={text}
+              onChange={e=>setText(e.target.value)}
+              placeholder="What would make Next Hello better for you?"
+              rows={6}
+              style={{ width:"100%", padding:"14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.6, marginBottom:16 }}
+            />
+            <Btn onClick={send} disabled={!text.trim() || sending}>
+              {sending ? "Sending..." : "Send Suggestion 💡"}
+            </Btn>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function RulesScreen({ onBack }) {
   const Section = ({ title, children }) => (
     <div style={{ marginBottom:20 }}>
@@ -2758,6 +2829,7 @@ function PhotoUploadScreen({ currentUser, onDone }) {
   if (screen === "onboarding") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "rules") return <PhoneShell bg={C.white}><StatusBar light/><RulesScreen onBack={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "help") return <PhoneShell bg={C.white}><StatusBar light/><HelpScreen onBack={()=>setScreen("app")} currentUser={currentUser}/></PhoneShell>;
+  if (screen === "suggestions") return <PhoneShell bg={C.white}><StatusBar light/><SuggestionsScreen onBack={()=>setScreen("app")} currentUser={currentUser}/></PhoneShell>;
 
   return (
     <PhoneShell bg={darkBg?C.dark:safeBg?C.coralPale:C.white}>
@@ -2769,7 +2841,7 @@ function PhotoUploadScreen({ currentUser, onDone }) {
         {tab==="offers" && <OffersScreen/>}
         {tab==="safety" && <SafetyScreen/>}
         {tab==="admin" && currentUser?.id && isGodMode(currentUser) && <AdminScreen currentUser={currentUser}/>}
-        {tab==="profile" && currentUser?.id && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")} onViewHelp={()=>setScreen("help")} onPrefsUpdated={loadUserPrefs}/>}
+        {tab==="profile" && currentUser?.id && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")} onViewHelp={()=>setScreen("help")} onPrefsUpdated={loadUserPrefs} onViewSuggestions={()=>setScreen("suggestions")}/>}
       </div>
       <BottomNav active={tab} setActive={setTab} darkBg={darkBg} helloCount={helloCount} isFounder={isGodMode(currentUser)}/>
     </PhoneShell>
