@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.54</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.55</div>
       </div>
     </div>
   );
@@ -1982,6 +1982,7 @@ function AdminScreen({ currentUser }) {
   const [messageSending, setMessageSending] = useState(false);
   const [viewMsgMember, setViewMsgMember] = useState(null);
   const [viewMsgs, setViewMsgs] = useState([]);
+  const [welcomeSentIds, setWelcomeSentIds] = useState(new Set());
 
   const QUICK_MESSAGES = [
     `Hi! Could you please update your profile photo to a clear, recent photo of your face? Members with face photos get far more Hellos! 😊`,
@@ -2010,6 +2011,10 @@ function AdminScreen({ currentUser }) {
     if (adminTab === 'members') {
       const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
       if (data) setMembers(data);
+      // Load which members have already received a welcome message
+      const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
+      const { data: welcomed } = await sb.from('messages').select('recipient_id').eq('sender_id', FOUNDER_ID);
+      if (welcomed) setWelcomeSentIds(new Set(welcomed.map(m => m.recipient_id)));
     }
     if (adminTab === 'reports') {
       const { data } = await sb.from('reports').select('*, reporter:profiles!reports_reporter_id_fkey(first_name,last_name), reported:profiles!reports_reported_id_fkey(first_name,last_name)').order('created_at', { ascending: false });
@@ -2157,6 +2162,17 @@ function AdminScreen({ currentUser }) {
                     <button onClick={async()=>{ await sb.from('profiles').update({ founding_member:!m.founding_member }).eq('id',m.id); showToast(m.founding_member?'VIP removed':'VIP granted'); loadAll(); }} style={{ padding:"5px 12px", borderRadius:20, background:"rgba(255,215,0,0.15)", border:"1px solid #FFD700", color:"#B8860B", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>
                       {m.founding_member ? '👑 Remove VIP' : '👑 Grant VIP'}
                     </button>
+                    {welcomeSentIds.has(m.id) ? (
+                      <span style={{ padding:"5px 12px", borderRadius:20, background:"#E8F5E9", border:"1px solid #A5D6A7", color:"#2E7D32", fontSize:11, fontWeight:700, fontFamily:sf }}>✅ Welcome sent</span>
+                    ) : (
+                      <button onClick={async()=>{
+                        try {
+                          await sb.rpc('send_welcome_message', { p_recipient: m.id });
+                          setWelcomeSentIds(prev => new Set([...prev, m.id]));
+                          showToast(`Welcome message sent to ${m.first_name} ✅`);
+                        } catch(e) { showToast('Failed to send welcome message'); }
+                      }} style={{ padding:"5px 12px", borderRadius:20, background:"#FFF3E0", border:"1px solid #FFCC80", color:"#E65100", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>👋 Send Welcome</button>
+                    )}
                   </div>
                 </div>
               ))}
