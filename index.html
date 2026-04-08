@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.53</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.54</div>
       </div>
     </div>
   );
@@ -2636,18 +2636,7 @@ function PhotoUploadScreen({ currentUser, onDone }) {
     } catch(e) { console.log('Profile fetch for email failed:', e); }
     // Send in-app welcome message — once only, fire and forget
     try {
-      const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
-      // Only send if not already sent (deduplication check)
-      const { data: existing } = await sb.from('messages')
-        .select('id').eq('sender_id', FOUNDER_ID).eq('recipient_id', currentUser.id).limit(1);
-      if (!existing || existing.length === 0) {
-        await sb.from('messages').insert({
-          sender_id: FOUNDER_ID,
-          recipient_id: currentUser.id,
-          text: `Welcome to Next Hello. 💕\n\nThis space was built for people like us — real, genuine, and done with the games.\n\nTake your time, have a browse, and remember…\n\nOne hello could change everything.\n\n— Paul, Founder`,
-          read: false,
-        });
-      }
+      await sb.rpc('send_welcome_message', { p_recipient: currentUser.id });
     } catch(e) { console.log('Welcome message failed:', e); }
     setCreating(false);
     onDone();
