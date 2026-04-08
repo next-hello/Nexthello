@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.43</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.44</div>
       </div>
     </div>
   );
@@ -1553,7 +1553,7 @@ function OffersScreen() {
   );
 }
 
-function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
+function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onPrefsUpdated }) {
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
@@ -1633,6 +1633,7 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
       const { error } = await db.saveProfile({ ...draft, id: currentUser.id });
       if (error) { alert('Could not save: ' + error.message); setSaving(false); return; }
       setProfile(draft); setEditing(false); setShowAI(false);
+      if (onPrefsUpdated) onPrefsUpdated(currentUser);
     } catch(e) { alert('Save failed: ' + e.message); }
     setSaving(false);
   };
@@ -1883,6 +1884,35 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
                 <button onClick={()=>{ const t=newInterest.trim(); if(t){ if(!(draft.interests||[]).includes(t)){ setDraft(d=>({...d,interests:[...(d.interests||[]),t]})); db.submitCustomInterest(t, currentUser?.id); } setNewInterest(''); }}} style={{ padding:"10px 16px", borderRadius:22, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Add</button>
               </div>
               <p style={{ fontSize:11, color:C.muted, fontFamily:sf, marginTop:6, lineHeight:1.5 }}>✨ Custom interests are shared with the community</p>
+            </div>
+            {/* Match preferences */}
+            <div style={{ borderTop:"1px solid #EAE6E2", paddingTop:12 }}>
+              <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>LOOKING FOR</label>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {["Men","Women","Everyone"].map(g => {
+                  const active = (draft.interested_in||[]).includes(g);
+                  return (
+                    <button key={g} onClick={()=>setDraft(d=>({ ...d, interested_in: active ? (d.interested_in||[]).filter(x=>x!==g) : [...(d.interested_in||[]), g] }))} style={{ padding:"8px 18px", borderRadius:22, cursor:"pointer", border:`1.5px solid ${active?C.coral:"#DDD8D4"}`, background:active?C.coralPale:C.white, color:active?C.coral:C.muted, fontSize:13, fontWeight:active?600:400, fontFamily:sf }}>
+                      {g}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>AGE RANGE</label>
+              <div style={{ display:"flex", justifyContent:"space-around", marginBottom:10 }}>
+                <div style={{ textAlign:"center" }}><div style={{ fontSize:24, fontWeight:700, color:C.coral }}>{draft.age_min||50}</div><div style={{ fontSize:10, color:C.muted, fontFamily:sf }}>MIN</div></div>
+                <div style={{ textAlign:"center" }}><div style={{ fontSize:24, fontWeight:700, color:C.coral }}>{(draft.age_max||85)>=85?"85+":(draft.age_max||85)}</div><div style={{ fontSize:10, color:C.muted, fontFamily:sf }}>MAX</div></div>
+              </div>
+              <div style={{ marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span style={{ fontSize:11, color:C.muted, fontFamily:sf }}>Minimum age</span><span style={{ fontSize:11, fontWeight:600, color:C.coral, fontFamily:sf }}>{draft.age_min||50}</span></div>
+                <input type="range" min={50} max={83} value={draft.age_min||50} onChange={e=>setDraft(d=>({...d, age_min:Math.min(+e.target.value,(d.age_max||85)-2)}))} style={{ width:"100%", accentColor:C.coral }}/>
+              </div>
+              <div>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span style={{ fontSize:11, color:C.muted, fontFamily:sf }}>Maximum age</span><span style={{ fontSize:11, fontWeight:600, color:C.coral, fontFamily:sf }}>{(draft.age_max||85)>=85?"85+":(draft.age_max||85)}</span></div>
+                <input type="range" min={52} max={85} value={draft.age_max||85} onChange={e=>setDraft(d=>({...d, age_max:Math.max(+e.target.value,(d.age_min||50)+2)}))} style={{ width:"100%", accentColor:C.coral }}/>
+              </div>
             </div>
             <div style={{ display:"flex", gap:10 }}>
               <Btn outline onClick={()=>{ setEditing(false); setShowAI(false); }}>Cancel</Btn>
@@ -2634,7 +2664,7 @@ function PhotoUploadScreen({ currentUser, onDone }) {
         {tab==="offers" && <OffersScreen/>}
         {tab==="safety" && <SafetyScreen/>}
         {tab==="admin" && currentUser?.id && isGodMode(currentUser) && <AdminScreen currentUser={currentUser}/>}
-        {tab==="profile" && currentUser?.id && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")} onViewHelp={()=>setScreen("help")}/>}
+        {tab==="profile" && currentUser?.id && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")} onViewHelp={()=>setScreen("help")} onPrefsUpdated={loadUserPrefs}/>}
       </div>
       <BottomNav active={tab} setActive={setTab} darkBg={darkBg} helloCount={helloCount} isFounder={isGodMode(currentUser)}/>
     </PhoneShell>
