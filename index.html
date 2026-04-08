@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.44</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.45</div>
       </div>
     </div>
   );
@@ -1570,7 +1570,7 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onPre
   const [uploadingSlot, setUploadingSlot] = useState(null);
   const [profileError, setProfileError] = useState(null);
 
-  useEffect(() => { loadProfile(); }, [currentUser]);
+  useEffect(() => { loadProfile(); }, [currentUser?.id]);
 
   const loadProfile = async () => {
     if (!currentUser?.id) return;
