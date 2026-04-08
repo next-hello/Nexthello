@@ -1156,7 +1156,7 @@ function HellosScreen({ currentUser }) {
     setActive(hello);
     setIsMutual(mutual);
     if (mutual) {
-      const otherId = hello.from_user;
+      const otherId = hello.from_user === currentUser.id ? hello.to_user : hello.from_user;
       const { data } = await db.getMessages(currentUser.id, otherId);
       if (data) setMessages(data);
     }
