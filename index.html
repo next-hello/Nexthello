@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.56</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.57</div>
       </div>
     </div>
   );
@@ -2041,6 +2041,15 @@ function AdminScreen({ currentUser }) {
       const { data } = await sb.from('profiles').select('id, first_name, last_name, photo_url').order('first_name', { ascending: true });
       if (data) setMembers(data);
     }
+    if (adminTab === 'suggestions') {
+      const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
+      const { data } = await sb.from('messages')
+        .select('*')
+        .eq('recipient_id', FOUNDER_ID)
+        .ilike('text', '💡 Suggestion from%')
+        .order('created_at', { ascending: false });
+      if (data) setMembers(data);
+    }
     setLoading(false);
   };
 
@@ -2102,6 +2111,7 @@ function AdminScreen({ currentUser }) {
     { id:'events', label:'🎉 Events' },
     { id:'interests', label:'✨ Interests' },
     { id:'messages', label:'💬 Messages' },
+    { id:'suggestions', label:'💡 Suggestions' },
   ];
 
   return (
@@ -2300,6 +2310,28 @@ function AdminScreen({ currentUser }) {
                 ))}
               </>
             )}
+          </div>
+        )}
+
+        {!loading && adminTab === 'suggestions' && (
+          <div>
+            <div style={{ padding:"12px 16px", background:C.white, borderBottom:"1px solid #EAE6E2", fontSize:12, color:C.muted, fontFamily:sf }}>
+              {members.length} suggestion{members.length !== 1 ? 's' : ''} received
+            </div>
+            {members.length === 0 ? (
+              <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>No suggestions yet</div>
+            ) : members.map((msg, i) => (
+              <div key={i} style={{ background:C.white, borderBottom:"1px solid #F0EBE8", padding:"14px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:"#3D5AFE", fontFamily:sf }}>💡 {msg.text.match(/💡 Suggestion from ([^\n:]+)/)?.[1] || 'Member'}</div>
+                  <div style={{ fontSize:11, color:C.muted, fontFamily:sf }}>{new Date(msg.created_at).toLocaleString('en-GB', { dateStyle:'short', timeStyle:'short' })}</div>
+                </div>
+                <div style={{ fontSize:13, color:C.text, fontFamily:sf, lineHeight:1.6, whiteSpace:"pre-wrap" }}>
+                  {msg.text.replace(/^💡 Suggestion from [^\n]+:\n\n/, '')}
+                </div>
+                {!msg.read && <div style={{ fontSize:10, color:"#3D5AFE", fontFamily:sf, marginTop:6 }}>● Unread</div>}
+              </div>
+            ))}
           </div>
         )}
       </div>
