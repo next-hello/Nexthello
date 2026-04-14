@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dating Over 50 Blog | Next Hello – Honest Advice for the Over 50s</title>
+  <meta name="description" content="The Next Hello blog – real, honest articles about dating over 50 in the UK. No games, no pressure. Just straightforward advice for people looking for genuine connection." />
+  <link rel="canonical" href="https://nexthello.co.uk/blog/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Dating Over 50 Blog | Next Hello" />
+  <meta property="og:description" content="Real, honest articles about dating over 50 in the UK. Find tips, advice, and inspiration for your next chapter." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://nexthello.co.uk/blog/" />
+  <meta property="og:site_name" content="Next Hello" />
+  <meta property="og:image" content="https://nexthello.co.uk/og-image.jpg" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --orange: #F97316;
+      --orange-dark: #ea6a0a;
+      --orange-light: #fff7f0;
+      --dark: #1a1a1a;
+      --mid: #4a4a4a;
+      --light: #f5f5f5;
+      --white: #ffffff;
+      --border: #e8e0d8;
+      --max: 860px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lato', sans-serif;
+      font-weight: 400;
+      color: var(--dark);
+      background: var(--white);
+      line-height: 1.7;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--dark);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--orange); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      list-style: none;
+    }
+    .nav-links a {
+      text-decoration: none;
+      color: var(--mid);
+      font-size: 0.9rem;
+      font-weight: 400;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-links a:hover { color: var(--dark); background: var(--light); }
+    .nav-links a.active { color: var(--orange); font-weight: 700; }
+    .btn-nav {
+      background: var(--orange);
+      color: var(--white) !important;
+      padding: 8px 18px !important;
+      border-radius: 24px !important;
+      font-weight: 700 !important;
+      transition: background 0.2s, transform 0.15s !important;
+    }
+    .btn-nav:hover { background: var(--orange-dark) !important; transform: translateY(-1px); }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, #fff7f0 0%, #fef3ea 60%, #fde8d0 100%);
+      padding: 72px 24px 64px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-eyebrow {
+      display: inline-block;
+      background: var(--orange);
+      color: var(--white);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      color: var(--dark);
+      line-height: 1.2;
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+    .hero p {
+      max-width: 600px;
+      margin: 0 auto;
+      color: var(--mid);
+      font-size: 1.1rem;
+      line-height: 1.8;
+    }
+
+    /* MAIN CONTENT */
+    main {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 64px 24px;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 32px;
+    }
+
+    /* ARTICLE CARD */
+    .article-card {
+      display: grid;
+      grid-template-columns: 1fr;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.25s, transform 0.25s;
+      text-decoration: none;
+      color: inherit;
+      background: var(--white);
+    }
+    .article-card:hover {
+      box-shadow: 0 8px 32px rgba(249,115,22,0.12);
+      transform: translateY(-3px);
+    }
+    .card-body { padding: 36px 40px; }
+    .card-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--orange);
+      border: 1px solid var(--orange);
+      border-radius: 4px;
+      padding: 2px 10px;
+      margin-bottom: 16px;
+    }
+    .card-body h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.65rem;
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--dark);
+      margin-bottom: 14px;
+      letter-spacing: -0.01em;
+    }
+    .card-body p {
+      color: var(--mid);
+      font-size: 1rem;
+      line-height: 1.75;
+      margin-bottom: 24px;
+    }
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: #999;
+    }
+    .card-meta .read-link {
+      margin-left: auto;
+      color: var(--orange);
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .card-meta .read-link:hover { text-decoration: underline; }
+
+    /* INTRO SECTION */
+    .intro-section {
+      margin-bottom: 56px;
+      padding: 36px 40px;
+      background: var(--orange-light);
+      border-radius: 12px;
+      border-left: 4px solid var(--orange);
+    }
+    .intro-section h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 12px;
+    }
+    .intro-section p {
+      color: var(--mid);
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+    .intro-section p + p { margin-top: 10px; }
+
+    /* FOOTER */
+    footer {
+      background: var(--dark);
+      color: #aaa;
+      padding: 40px 24px;
+      text-align: center;
+      font-size: 0.875rem;
+    }
+    footer a { color: var(--orange); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    .footer-inner { max-width: var(--max); margin: 0 auto; }
+    .footer-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 12px;
+    }
+    .footer-logo span { color: var(--orange); }
+    .footer-links { display: flex; gap: 20px; justify-content: center; margin: 16px 0; flex-wrap: wrap; }
+    .footer-links a { color: #aaa; }
+    .footer-disclaimer { margin-top: 20px; font-size: 0.8rem; color: #666; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a class="nav-logo" href="https://nexthello.co.uk/">Next<span>Hello</span></a>
+      <ul class="nav-links">
+        <li><a href="https://nexthello.co.uk/">Home</a></li>
+        <li><a href="https://nexthello.co.uk/blog/" class="active">Blog</a></li>
+        <li><a href="https://app.nexthello.co.uk/">Member Login</a></li>
+        <li><a href="https://nexthello.co.uk/#join" class="btn-nav">Join Free</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-eyebrow">The Next Hello Blog</div>
+    <h1>Real Talk About Dating<br>Over 50 in the UK</h1>
+    <p>Honest, warm, no-nonsense articles about finding love, connection, and companionship in your 50s, 60s, and beyond. Because you deserve a second chance that actually feels good.</p>
+  </header>
+
+  <main>
+
+    <div class="intro-section">
+      <h2>Why we started writing about this</h2>
+      <p>Dating over 50 in the UK can feel like a strange new world. The apps are full of people half your age, the swiping feels hollow, and it's hard to know who's genuine and who isn't. We started Next Hello because we believed there was a better way — and this blog is where we share what we know.</p>
+      <p>Here you'll find honest advice, practical tips, and real talk about dating in later life. No glossy nonsense. Just straightforward, helpful content for people who know what they want and deserve to find it.</p>
+    </div>
+
+    <p class="section-label">Latest Articles</p>
+
+    <a class="article-card" href="https://nexthello.co.uk/blog/free-dating-over-50s-uk.html">
+      <div class="card-body">
+        <span class="card-tag">Dating Advice</span>
+        <h2>Free Dating Over 50s in the UK – What to Look For (and What to Avoid)</h2>
+        <p>The honest guide to finding a free dating site for over 50s that actually works. We cover what the big apps get wrong, what genuinely matters, and why a simpler approach often leads to better connections.</p>
+        <div class="card-meta">
+          <span>5 min read</span>
+          <span>·</span>
+          <span>Dating in the UK</span>
+          <a class="read-link" href="https://nexthello.co.uk/blog/free-dating-over-50s-uk.html">Read article →</a>
+        </div>
+      </div>
+    </a>
+
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-logo">Next<span>Hello</span></div>
+      <p>Dating over 50, done properly.</p>
+      <div class="footer-links">
+        <a href="https://nexthello.co.uk/">Home</a>
+        <a href="https://nexthello.co.uk/blog/">Blog</a>
+        <a href="https://app.nexthello.co.uk/">Member Login</a>
+        <a href="https://nexthello.co.uk/#join">Join Free</a>
+      </div>
+      <p class="footer-disclaimer">© 2025 Next Hello. All rights reserved. Built for the over 50s, in the UK.</p>
+    </div>
+  </footer>
+
+</body>
+</html>
