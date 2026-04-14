@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.70</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.71</div>
       </div>
     </div>
   );
@@ -2516,6 +2516,9 @@ function HelpScreen({ onBack, currentUser }) {
     const newMessages = [...messages, { role:'user', content:q }];
     setMessages(newMessages);
     try {
+      // Anthropic requires conversation to start with a user turn — strip any leading assistant messages
+      const apiMessages = newMessages.map(m => ({ role:m.role, content:m.content }));
+      while (apiMessages.length > 0 && apiMessages[0].role !== 'user') apiMessages.shift();
       const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
@@ -2523,14 +2526,20 @@ function HelpScreen({ onBack, currentUser }) {
           model:"claude-sonnet-4-20250514",
           max_tokens:1000,
           system: HELP_SYSTEM_PROMPT,
-          messages: newMessages.map(m => ({ role:m.role, content:m.content })),
+          messages: apiMessages,
         })
       });
+      console.log("[Nell] HTTP status:", res.status);
       const data = await res.json();
-      const reply = data.content?.[0]?.text || "I'm not sure about that one! Please email hello@nexthello.co.uk and Paul will help you personally. 😊";
+      console.log("[Nell] proxy response:", JSON.stringify(data).slice(0, 300));
+      const reply = data.content?.[0]?.text
+        || data.error?.message
+        || (data.error ? `Error: ${JSON.stringify(data.error)}` : null)
+        || "Sorry — Nell didn't receive a valid reply. Please try again.";
       setMessages(prev => [...prev, { role:'assistant', content:reply }]);
     } catch(e) {
-      setMessages(prev => [...prev, { role:'assistant', content:"Oops, something went wrong at my end! Please try again or email hello@nexthello.co.uk 😊" }]);
+      console.error("[Nell] fetch error:", e);
+      setMessages(prev => [...prev, { role:'assistant', content:`Sorry — something went wrong (${e.message}). Please try again or email hello@nexthello.co.uk 😊` }]);
     }
     setLoading(false);
   };
