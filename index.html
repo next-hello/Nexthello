@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.73</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.74</div>
       </div>
     </div>
   );
@@ -2464,16 +2464,26 @@ Key facts:
 - Report & Block: flag icon on any profile
 - Contact: hello@nexthello.co.uk
 
+PROFILE WRITING MODE:
+If the user asks to help write, improve, or create their dating profile — do NOT give generic advice. Instead, run an interactive guided flow, asking ONE question at a time in this order:
+1. "What's your name, and whereabouts in the UK are you based?"
+2. "How would your closest friends describe you in three words?"
+3. "What do you love doing with your free time? (hobbies, interests, passions)"
+4. "What does a perfect weekend look like for you?"
+5. "What kind of person are you hoping to meet — what matters most to you in someone?"
+6. "Is there anything else you'd like people to know about you — something that makes you, you?"
+After each answer, acknowledge warmly and ask the next question. Once you have all answers, write them a warm, genuine, natural-sounding dating profile (2-3 short paragraphs). Then offer to tweak the tone if they want it more playful, more heartfelt, or shorter.
+
 Keep responses warm, concise and friendly. If unsure, direct to hello@nexthello.co.uk.`;
 
 const SUGGESTED_QUESTIONS = [
+  "✍️ Help me write my profile",
   "How does the Hello system work?",
   "How do I add more photos?",
   "What is VIP Founding Member status?",
   "How do I report someone?",
   "Can I delete my account?",
   "How much does it cost?",
-  "How do I create an event?",
   "Why can't I message someone?",
 ];
 
