@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.72</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.73</div>
       </div>
     </div>
   );
@@ -1219,7 +1219,7 @@ function HellosScreen({ currentUser }) {
     try {
       const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
         method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamlwYmR2Y2JtcmtxYWt0Z3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDA4NTksImV4cCI6MjA4OTMxNjg1OX0.A71rpOJ-73_DsefhuLvbViA_wViFvASIlBO6PzQtX0w"},
-        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:400,
+        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:400,
           system:"Warm dating coach for 50+. Return ONLY a JSON array of 3 icebreaker strings, no markdown.",
           messages:[{ role:"user", content:`3 icebreakers for ${p.first_name} (${p.age}), bio: "${p.bio}", interests: ${(p.interests||[]).join(", ")}. Under 30 words each.` }]
         })
@@ -1734,7 +1734,7 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
     try {
       const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
         method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamlwYmR2Y2JtcmtxYWt0Z3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDA4NTksImV4cCI6MjA4OTMxNjg1OX0.A71rpOJ-73_DsefhuLvbViA_wViFvASIlBO6PzQtX0w"},
-        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:500,
+        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:500,
           system:"Dating profile coach for 50+. Return ONLY a JSON array of 3 bio strings, no markdown.",
           messages:[{ role:"user", content:`3 bios for ${draft.first_name}, ${draft.age}, ${draft.location}, interests: ${(draft.interests||[]).join(", ")}. 2-3 sentences, max 60 words, warm.` }]
         })
@@ -2494,46 +2494,27 @@ function HelpScreen({ onBack, currentUser }) {
     setLoading(true);
     const newMessages = [...messages, { role:'user', content:q }];
     setMessages(newMessages);
-
-    const ENDPOINT = "https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy";
-    const payload = {
-      model:"claude-sonnet-4-20250514",
-      max_tokens:1000,
-      system: HELP_SYSTEM_PROMPT,
-      messages: newMessages.map(m => ({ role:m.role, content:m.content })),
-    };
-
-    console.log("=== NELL DEBUG ===");
-    console.log("1. Endpoint:", ENDPOINT);
-    console.log("2. Payload:", JSON.stringify(payload, null, 2));
-
     try {
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
         method:"POST",
         headers:{
           "Content-Type":"application/json",
           "Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamlwYmR2Y2JtcmtxYWt0Z3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDA4NTksImV4cCI6MjA4OTMxNjg1OX0.A71rpOJ-73_DsefhuLvbViA_wViFvASIlBO6PzQtX0w",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          model:"claude-sonnet-4-5",
+          max_tokens:1000,
+          system: HELP_SYSTEM_PROMPT,
+          messages: newMessages.map(m => ({ role:m.role, content:m.content })),
+        })
       });
-
-      console.log("3. HTTP status:", res.status, res.statusText);
-
       const data = await res.json();
-      console.log("4. Full response:", JSON.stringify(data, null, 2));
-
       const reply =
         data?.content?.[0]?.text ||
-        data?.response?.content?.[0]?.text ||
-        (typeof data?.content === 'string' ? data.content : null) ||
-        data?.message ||
-        `[DEBUG] No text found. HTTP ${res.status}. Raw response: ${JSON.stringify(data)}`;
-
-      console.log("5. Parsed reply:", reply);
+        "I'm not sure about that one! Please email hello@nexthello.co.uk and Paul will help you personally. 😊";
       setMessages(prev => [...prev, { role:'assistant', content:reply }]);
     } catch(e) {
-      console.log("6. Fetch exception:", e.message, e);
-      setMessages(prev => [...prev, { role:'assistant', content:`[DEBUG] Fetch failed: ${e.message}` }]);
+      setMessages(prev => [...prev, { role:'assistant', content:"Oops, something went wrong at my end! Please try again or email hello@nexthello.co.uk 😊" }]);
     }
     setLoading(false);
   };
