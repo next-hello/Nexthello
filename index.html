@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.69</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.70</div>
       </div>
     </div>
   );
@@ -1640,7 +1640,7 @@ function OffersScreen() {
   );
 }
 
-function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onPrefsUpdated, onViewSuggestions }) {
+function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onViewHelp, onPrefsUpdated, onViewSuggestions }) {
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
@@ -1862,6 +1862,15 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onPre
               <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>Got an idea? Paul reads every message personally</div>
             </div>
             <div style={{ marginLeft:"auto", fontSize:18, color:"#5C7CFF" }}>›</div>
+          </div>
+
+          <div onClick={onViewHelp} style={{ marginTop:10, background:"#F5F0FF", border:"1.5px solid #C4A8FF", borderRadius:16, padding:"14px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:40, height:40, borderRadius:"50%", background:"#7C3AED", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🤖</div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color:"#7C3AED" }}>Ask Nell — AI Help</div>
+              <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>Get instant help with anything in the app</div>
+            </div>
+            <div style={{ marginLeft:"auto", fontSize:18, color:"#7C3AED" }}>›</div>
           </div>
 
           {/* Danger zone */}
