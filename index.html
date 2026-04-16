@@ -190,7 +190,7 @@ function PhoneShell({ children, bg=C.dark }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.71</div>
+        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.69</div>
       </div>
     </div>
   );
@@ -1640,7 +1640,7 @@ function OffersScreen() {
   );
 }
 
-function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onViewHelp, onPrefsUpdated, onViewSuggestions }) {
+function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onPrefsUpdated, onViewSuggestions }) {
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
@@ -1862,15 +1862,6 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
               <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>Got an idea? Paul reads every message personally</div>
             </div>
             <div style={{ marginLeft:"auto", fontSize:18, color:"#5C7CFF" }}>›</div>
-          </div>
-
-          <div onClick={onViewHelp} style={{ marginTop:10, background:"#F5FFF8", border:"1.5px solid #A5D6B0", borderRadius:16, padding:"14px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:40, height:40, borderRadius:"50%", background:"#2E7D32", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🤖</div>
-            <div>
-              <div style={{ fontSize:14, fontWeight:700, color:"#2E7D32" }}>Ask Nell — AI Help</div>
-              <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>Get help writing your profile, or ask anything about the app</div>
-            </div>
-            <div style={{ marginLeft:"auto", fontSize:18, color:"#2E7D32" }}>›</div>
           </div>
 
           {/* Danger zone */}
@@ -2453,12 +2444,7 @@ function AdminScreen({ currentUser }) {
 // ── Help Screen ───────────────────────────────────────────
 const HELP_SYSTEM_PROMPT = `You are Nell, the friendly AI help assistant for Next Hello — a warm, safe dating app built exclusively for the over 50s. Created by Paul Halfpenny, founder.
 
-Your personality: warm, friendly, slightly funny, never patronising. You speak to the over 50s as intelligent adults who deserve honesty and encouragement — never cringe, never corporate.
-
-You have TWO jobs:
-
-JOB 1 — APP HELP
-Answer questions about how Next Hello works.
+Your personality: warm, friendly, slightly funny, never patronising.
 
 Key facts:
 - The Hello System: say Hello to someone you like. They say Hello back. Only then can you chat. Say Goodbye if not interested — they never know.
@@ -2469,25 +2455,9 @@ Key facts:
 - Report & Block: flag icon on any profile
 - Contact: hello@nexthello.co.uk
 
-JOB 2 — PROFILE WRITING HELP
-If the user asks for help writing, improving, or rewriting their dating profile bio — HELP THEM. Do not refer them elsewhere. This is something you are brilliant at.
-
-Profile writing rules:
-- Always write in first person, from the user's point of view
-- Keep the tone warm, natural, and age-appropriate for someone in their 50s or 60s
-- Never use cringe phrases like "I love to laugh" or "I enjoy long walks on the beach"
-- Write like a real person, not a dating profile cliché
-- If they haven't given you any details about themselves, ask 2–3 short friendly questions first (e.g. what they enjoy, what they're looking for, where they live, their job or hobbies)
-- Offer short (2–3 sentence), medium (4–5 sentence), and fuller versions when appropriate
-- Encourage nervous users — remind them that honest and warm beats perfect every time
-- If they share a draft, improve it gently: keep their voice, just make it shine
-
-Never say "I'm not sure about that" for a profile writing request. Always have a go.`;
+Keep responses warm, concise and friendly. If unsure, direct to hello@nexthello.co.uk.`;
 
 const SUGGESTED_QUESTIONS = [
-  "Can you help me write my profile?",
-  "Can you improve my bio?",
-  "What should I say about myself?",
   "How does the Hello system work?",
   "How do I add more photos?",
   "What is VIP Founding Member status?",
@@ -2516,9 +2486,6 @@ function HelpScreen({ onBack, currentUser }) {
     const newMessages = [...messages, { role:'user', content:q }];
     setMessages(newMessages);
     try {
-      // Anthropic requires conversation to start with a user turn — strip any leading assistant messages
-      const apiMessages = newMessages.map(m => ({ role:m.role, content:m.content }));
-      while (apiMessages.length > 0 && apiMessages[0].role !== 'user') apiMessages.shift();
       const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
@@ -2526,20 +2493,21 @@ function HelpScreen({ onBack, currentUser }) {
           model:"claude-sonnet-4-20250514",
           max_tokens:1000,
           system: HELP_SYSTEM_PROMPT,
-          messages: apiMessages,
+          messages: newMessages.map(m => ({ role:m.role, content:m.content })),
         })
       });
-      console.log("[Nell] HTTP status:", res.status);
       const data = await res.json();
-      console.log("[Nell] proxy response:", JSON.stringify(data).slice(0, 300));
-      const reply = data.content?.[0]?.text
-        || data.error?.message
-        || (data.error ? `Error: ${JSON.stringify(data.error)}` : null)
-        || "Sorry — Nell didn't receive a valid reply. Please try again.";
+      // Handle multiple possible response shapes from the proxy
+      let reply =
+        data?.content?.[0]?.text ||
+        data?.response?.content?.[0]?.text ||
+        (typeof data?.content === 'string' ? data.content : null) ||
+        data?.message ||
+        (data?.error ? "Sorry, something went wrong — please try again. 😊" : null) ||
+        "I'm not sure about that one! Please email hello@nexthello.co.uk and Paul will help you personally. 😊";
       setMessages(prev => [...prev, { role:'assistant', content:reply }]);
     } catch(e) {
-      console.error("[Nell] fetch error:", e);
-      setMessages(prev => [...prev, { role:'assistant', content:`Sorry — something went wrong (${e.message}). Please try again or email hello@nexthello.co.uk 😊` }]);
+      setMessages(prev => [...prev, { role:'assistant', content:"Oops, something went wrong at my end! Please try again or email hello@nexthello.co.uk 😊" }]);
     }
     setLoading(false);
   };
