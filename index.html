@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Next Hello</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Next Hello · v1.51</title>
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
@@ -36,18 +41,20 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; h
   window.RESEND_KEY = 're_9gJArjKV_Co21j7j5nehLr8eGtpR6MKU1';
   window.sendEmail = async (to, subject, html) => {
     try {
-      const res = await fetch('https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/send-email', {
+      await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${window.RESEND_KEY}`,
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamlwYmR2Y2JtcmtxYWt0Z3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDA4NTksImV4cCI6MjA4OTMxNjg1OX0.A71rpOJ-73_DsefhuLvbViA_wViFvASIlBO6PzQtX0w',
         },
-        body: JSON.stringify({ to, subject, html })
+        body: JSON.stringify({
+          from: 'Next Hello <hello@nexthello.co.uk>',
+          to: [to],
+          subject,
+          html,
+        })
       });
-      const data = await res.json();
-      if (data.error) console.error('Email failed:', data.error);
-      else console.log('Email sent successfully to:', to);
-    } catch(e) { console.error('Email notification failed:', e); }
+    } catch(e) { console.log('Email notification failed:', e); }
   };
 
   window.notifyHello = async (toEmail, toName, fromName) => {
@@ -60,7 +67,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; h
         <p style="font-size:18px;color:#F0DDD4;margin-bottom:8px;">Hi ${toName}! 👋</p>
         <p style="font-size:15px;color:rgba(255,255,255,0.8);line-height:1.7;margin-bottom:24px;"><strong style="color:#E07A5F">${fromName}</strong> has said Hello to you on Next Hello!</p>
         <p style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:32px;">Remember — if you say Hello back, you'll both be able to chat. If you're not interested, simply don't respond. No awkwardness, ever.</p>
-        <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">View ${fromName}'s profile →</a>
+        <a href="https://nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">View ${fromName}'s profile →</a>
         <p style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:32px;line-height:1.6;">Next Hello · Because one Hello can change everything<br/>hello@nexthello.co.uk · nexthello.co.uk</p>
       </div>`
     );
@@ -75,7 +82,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; h
         <div style="font-size:32px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
         <p style="font-size:18px;color:#F0DDD4;margin-bottom:8px;">Hi ${toName}! 💬</p>
         <p style="font-size:15px;color:rgba(255,255,255,0.8);line-height:1.7;margin-bottom:24px;"><strong style="color:#E07A5F">${fromName}</strong> has sent you a new message on Next Hello!</p>
-        <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Read their message →</a>
+        <a href="https://nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Read their message →</a>
         <p style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:32px;line-height:1.6;">Next Hello · Because one Hello can change everything<br/>hello@nexthello.co.uk · nexthello.co.uk</p>
       </div>`
     );
@@ -110,7 +117,7 @@ const auth = {
 const db = {
   saveProfile: (profile) => sb.from('profiles').upsert(profile),
   getProfiles: () => sb.from('profiles').select('*'),
-  getProfile: (id) => sb.from('profiles').select('*').eq('id', id).maybeSingle(),
+  getProfile: (id) => sb.from('profiles').select('*').eq('id', id).single(),
   getMessages: (userId, otherId) => sb.from('messages').select('*')
     .or(`and(sender_id.eq.${userId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${userId})`)
     .order('created_at', { ascending: true }),
@@ -148,7 +155,7 @@ const db = {
   getCommunityInterests: () => sb.from('custom_interests').select('interest, count').eq('approved', true).order('count', { ascending: false }),
   submitCustomInterest: async (interest, userId) => {
     // Upsert — if exists increment count, if new insert
-    const { data: existing } = await sb.from('custom_interests').select('id, count').eq('interest', interest).maybeSingle();
+    const { data: existing } = await sb.from('custom_interests').select('id, count').eq('interest', interest).single();
     if (existing) {
       return sb.from('custom_interests').update({ count: existing.count + 1 }).eq('id', existing.id);
     } else {
@@ -160,7 +167,7 @@ const db = {
   deactivateProfile: (userId) => sb.from('profiles').update({ status: 'deactivated' }).eq('id', userId),
   deleteAccount: async (userId) => {
     // Retain email in separate table before deleting
-    const { data: p } = await sb.from('profiles').select('first_name, last_name').eq('id', userId).maybeSingle();
+    const { data: p } = await sb.from('profiles').select('first_name, last_name').eq('id', userId).single();
     await sb.from('deleted_members').upsert({ user_id: userId, deleted_at: new Date().toISOString(), first_name: p?.first_name, last_name: p?.last_name });
     await sb.from('profiles').delete().eq('id', userId);
     await sb.auth.signOut();
@@ -188,9 +195,9 @@ const Btn = ({ children, onClick, outline, disabled, small }) => (
 function PhoneShell({ children, bg=C.dark }) {
   return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#0D0C0B" }}>
+      <div style={{ position:"fixed", top:8, left:8, background:"#FF0000", color:"#fff", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:4, zIndex:9999, fontFamily:"monospace" }}>BUILD: hello-fix-v3</div>
       <div style={{ width:390, height:844, borderRadius:50, overflow:"hidden", boxShadow:"0 0 0 10px #191818, 0 0 0 12px #2e2c2c, 0 50px 100px rgba(0,0,0,0.8)", display:"flex", flexDirection:"column", background:bg, position:"relative" }}>
         {children}
-        <div style={{ position:"absolute", bottom:4, left:0, right:0, textAlign:"center", fontSize:9, color:"rgba(255,255,255,0.2)", fontFamily:"monospace", pointerEvents:"none" }}>v1.74</div>
       </div>
     </div>
   );
@@ -232,31 +239,20 @@ function LoginScreen({ onBack, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
 
   const submit = async () => {
     if (!email||!pass) { setErr('Please fill in all fields.'); return; }
     setLoading(true); setErr('');
     const { error } = await auth.signIn(email, pass);
     if (error) { setErr(error.message); setLoading(false); }
-    else {
-      // Store remember me preference
-      if (rememberMe) {
-        localStorage.setItem('nh_remember_me', '1');
-      } else {
-        localStorage.removeItem('nh_remember_me');
-        // Sign out when tab/window closes if not remembering
-        window.addEventListener('beforeunload', () => sb.auth.signOut(), { once: true });
-      }
-      onSuccess();
-    }
+    else onSuccess();
   };
 
   const sendReset = async () => {
     const e = resetEmail || email;
     if (!e) { setErr('Please enter your email address first.'); return; }
     setLoading(true);
-    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: 'https://app.nexthello.co.uk' });
+    const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: 'https://nexthellow.netlify.app/#reset-password' });
     if (error) { setErr(error.message); }
     else { setResetSent(true); setErr(''); }
     setLoading(false);
@@ -274,12 +270,8 @@ function LoginScreen({ onBack, onSuccess }) {
         <InputField label="PASSWORD" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Your password"/>
         {err && <p style={{ color:C.coral, fontSize:13, fontFamily:sf, marginBottom:10 }}>{err}</p>}
         {resetSent && <div style={{ background:"#E8F5E9", borderRadius:12, padding:"12px 16px", marginBottom:16 }}><p style={{ color:"#2E7D32", fontSize:13, fontFamily:sf, margin:0 }}>✅ Password reset email sent! Check your inbox.</p></div>}
-        <div style={{ textAlign:"right", marginBottom:16 }}>
+        <div style={{ textAlign:"right", marginBottom:20 }}>
           <span onClick={sendReset} style={{ fontSize:13, color:C.coral, fontFamily:sf, cursor:"pointer" }}>Forgot password? Tap to reset</span>
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20 }}>
-          <input type="checkbox" id="rememberMe" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)} style={{ width:18, height:18, accentColor:C.coral, cursor:"pointer" }}/>
-          <label htmlFor="rememberMe" style={{ fontSize:13, color:C.muted, fontFamily:sf, cursor:"pointer" }}>Remember me</label>
         </div>
         <Btn onClick={submit} disabled={loading}>{loading ? "Signing in..." : "Sign In"}</Btn>
       </div>
@@ -356,11 +348,12 @@ function RegisterScreen({ onBack, onSuccess }) {
         if (profileError) {
           localStorage.setItem('nh_pending_profile', JSON.stringify(profileData));
         }
-        // Send welcome email — fire and forget, never block signup
-        window.sendEmail(
-          d.email,
-          `Welcome to Next Hello, ${d.firstName}! 💕`,
-          `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
+        // Send welcome email
+        try {
+          await window.sendEmail(
+            d.email,
+            `Welcome to Next Hello, ${d.firstName}! 💕`,
+            `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
               <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
               <div style="font-size:36px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
               <p style="font-size:19px;color:#F0DDD4;margin-bottom:6px;">Hi ${d.firstName}! 👋</p>
@@ -375,26 +368,11 @@ function RegisterScreen({ onBack, onSuccess }) {
                 🎉 <strong style="color:#fff;">Check out Events</strong> — meet members in real life
               </p>
               <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:24px;">If you have any questions — send us a message directly through the app. The 'admin team' is currently just me, Paul, in my front room in Macclesfield — but I'm very friendly and I make a great cup of tea. ☕😄</p>
-              <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
+              <a href="https://nexthellow.netlify.app" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
               <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong><br/><span style="font-size:12px;color:rgba(255,255,255,0.45);">Founder, Next Hello</span></p>
             </div>`
-        ).catch(e => console.log('Welcome email failed:', e));
-        // Admin notification — fire and forget, never block signup
-        const signupTime = new Date().toLocaleString('en-GB', { dateStyle:'full', timeStyle:'short' });
-        const age = d.dob ? new Date().getFullYear() - new Date(d.dob).getFullYear() : 'not provided';
-        window.sendEmail(
-          'pbhalfpenny@icloud.com',
-          `🎉 New member joined Next Hello`,
-          `<div style="font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:28px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
-              <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
-              <div style="font-size:28px;font-weight:700;color:#FAFAF8;margin-bottom:20px;">New Member Alert 🎉</div>
-              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Name:</strong> ${d.firstName} ${d.lastName || ''}</p>
-              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Email:</strong> ${d.email}</p>
-              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Age:</strong> ${age}</p>
-              <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Signed up:</strong> ${signupTime}</p>
-              ${isFoundingMember ? `<p style="font-size:14px;color:#FFD700;margin-top:12px;">👑 VIP Founding Member</p>` : ''}
-            </div>`
-        ).catch(e => console.log('Admin notification failed:', e));
+          );
+        } catch(emailErr) { console.log('Welcome email failed:', emailErr); }
       } else {
         const profileData = {
           first_name: d.firstName, last_name: d.lastName,
@@ -807,40 +785,50 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [favourites, setFavourites] = useState([]);
-  const [founderMode, setFounderMode] = useState(true);
+  const [founderMode, setFounderMode] = useState(true); // God Mode ON by default for founder
   const [showReportBlock, setShowReportBlock] = useState(false);
   const [blockedIds, setBlockedIds] = useState([]);
-  const [zoomPhoto, setZoomPhoto] = useState(null);
   const isFounder = isGodMode(currentUser);
 
   const [goodbyeIds, setGoodbyeIds] = useState([]);
   const [maybeIds, setMaybeIds] = useState([]);
 
-  useEffect(() => {
+  useEffect(() => { 
     if (currentUser?.id) loadExclusions();
-  }, [currentUser]);
+  }, [currentUser?.id, founderMode]);
+
+  const loadProfiles = async () => {
+    await loadProfilesWithIds(goodbyeIds, maybeIds, favourites);
+  };
 
   const loadExclusions = async () => {
-    const [goodbyeRes, maybeRes] = await Promise.all([
+    // Load goodbyes, maybes AND sent hellos simultaneously
+    const [goodbyeRes, maybeRes, helloRes] = await Promise.all([
       sb.from('goodbyes').select('to_user').eq('from_user', currentUser.id),
       sb.from('maybes').select('to_user').eq('from_user', currentUser.id),
+      sb.from('hellos').select('to_user').eq('from_user', currentUser.id),
     ]);
     const gIds = goodbyeRes.data ? goodbyeRes.data.map(g => g.to_user) : [];
     const mIds = maybeRes.data ? maybeRes.data.map(m => m.to_user) : [];
+    const hIds = helloRes.data ? helloRes.data.map(h => h.to_user) : [];
     setGoodbyeIds(gIds);
     setMaybeIds(mIds);
-    // Pass ids directly — avoids race condition with state update
-    loadProfiles(gIds, mIds);
+    setFavourites(hIds);
+    // Load profiles only AFTER all exclusions are ready
+    await loadProfilesWithIds(gIds, mIds, hIds);
   };
 
-  useEffect(() => { loadProfiles(); }, [founderMode]);
-
-  const loadProfiles = async (gIds = goodbyeIds, mIds = maybeIds) => {
+  const loadProfilesWithIds = async (gIds, mIds, hIds) => {
     setLoading(true);
     const { data } = await db.getProfiles();
     if (data) {
-      let filtered = data.filter(p => p.id !== currentUser?.id && !blockedIds.includes(p.id) && !gIds.includes(p.id) && !mIds.includes(p.id));
-      // God Mode: founder sees ALL profiles unfiltered
+      let filtered = data.filter(p =>
+        p.id !== currentUser?.id &&
+        !blockedIds.includes(p.id) &&
+        !gIds.includes(p.id) &&
+        !mIds.includes(p.id) &&
+        !hIds.includes(p.id)
+      );
       if (!isFounder || !founderMode) {
         const myGender = (prefs?.gender || '').toLowerCase();
         const interestedIn = prefs?.interestedIn || ['Everyone'];
@@ -854,15 +842,6 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
             return false;
           });
         }
-        // Also filter by who THEY are interested in
-        filtered = filtered.filter(p => {
-          const theirInterest = p.interested_in || ['Everyone'];
-          if (theirInterest.includes('Everyone')) return true;
-          if (theirInterest.includes('Men') && (myGender === 'man' || myGender === 'male')) return true;
-          if (theirInterest.includes('Women') && (myGender === 'woman' || myGender === 'female')) return true;
-          return false;
-        });
-        // Filter out paused/deactivated profiles
         filtered = filtered.filter(p => !p.status || p.status === 'active' || p.status === null);
         if (prefs?.ageMin) filtered = filtered.filter(p => !p.age || p.age >= prefs.ageMin);
         if (prefs?.ageMax && prefs.ageMax < 85) filtered = filtered.filter(p => !p.age || p.age <= prefs.ageMax);
@@ -870,6 +849,14 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
       setProfiles(filtered);
     }
     setLoading(false);
+  };
+
+  useEffect(() => { 
+    if (currentUser?.id) loadExclusions();
+  }, [currentUser, founderMode]);
+
+  const loadProfiles = async () => {
+    await loadProfilesWithIds(goodbyeIds, maybeIds, favourites);
   };
 
   const profile = profiles[idx] || null;
@@ -1009,10 +996,10 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
           <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12 }}>
             <div style={{ fontSize:36 }}>✨</div>
             <div style={{ fontSize:18, color:C.white, fontWeight:600, textAlign:"center" }}>
-              {profiles.length === 0 ? "Be the first member!" : "You've seen everyone!"}
+              {"No more profiles to show right now."}
             </div>
             <div style={{ fontSize:13, color:C.muted, fontFamily:sf, textAlign:"center", lineHeight:1.6 }}>
-              {profiles.length === 0 ? "Invite friends to join Next Hello." : "Check back soon for new members."}
+              {"Tap refresh to reload, or check your Hello and Maybe lists in the Hellos tab."}
             </div>
             <button onClick={loadProfiles} style={{ marginTop:8, padding:"10px 24px", borderRadius:20, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sf }}>Refresh</button>
           </div>
@@ -1029,11 +1016,13 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
             </div>
             {profile.photo_url && (
               <div style={{ marginBottom:16 }}>
-                <img src={(profile.photos && profile.photos[0]) || profile.photo_url} alt={profile.first_name} onClick={()=>setZoomPhoto((profile.photos && profile.photos[0]) || profile.photo_url)} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280, cursor:"zoom-in" }}/>
+                {/* Main photo */}
+                <img src={(profile.photos && profile.photos[0]) || profile.photo_url} alt={profile.first_name} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280 }}/>
+                {/* Additional photos grid */}
                 {profile.photos && profile.photos.length > 1 && (
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginTop:6 }}>
                     {profile.photos.slice(1).map((p,i) => (
-                      <img key={i} src={p} onClick={()=>setZoomPhoto(p)} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12, cursor:"zoom-in" }} alt=""/>
+                      <img key={i} src={p} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12 }} alt=""/>
                     ))}
                   </div>
                 )}
@@ -1079,12 +1068,6 @@ function BrowseScreen({ currentUser, prefs, onSendHello }) {
       )}
 
       {toast && <div style={{ position:"absolute", bottom:90, left:"50%", transform:"translateX(-50%)", background:C.coral, color:C.white, padding:"10px 20px", borderRadius:30, fontSize:13, fontWeight:600, whiteSpace:"nowrap", zIndex:20, fontFamily:sf }}>{toast}</div>}
-      {zoomPhoto && (
-        <div onClick={()=>setZoomPhoto(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, cursor:"zoom-out" }}>
-          <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
-          <img src={zoomPhoto} style={{ maxWidth:"95vw", maxHeight:"90vh", borderRadius:16, objectFit:"contain" }} alt=""/>
-        </div>
-      )}
     </div>
   );
 }
@@ -1101,23 +1084,27 @@ function HellosScreen({ currentUser }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [icebreakers, setIcebreakers] = useState([]);
   const [showIce, setShowIce] = useState(false);
-  const [tab, setTab] = useState('received'); // received | matches | maybe | nexthello
+  const [tab, setTab] = useState('received'); // received | matches | maybe | sent
   const [maybeProfiles, setMaybeProfiles] = useState([]);
-  const [selectedMaybeProfile, setSelectedMaybeProfile] = useState(null);
-  const [founderMessages, setFounderMessages] = useState([]);
-  const [founderInput, setFounderInput] = useState('');
-  const [founderThreadOpen, setFounderThreadOpen] = useState(false);
-  const [zoomPhoto, setZoomPhoto] = useState(null);
+  const [sentHelloProfiles, setSentHelloProfiles] = useState([]);
   const bottomRef = useRef(null);
 
   useEffect(() => { 
     if (currentUser?.id) {
       loadHellos();
       loadMaybes();
-      loadFounderMessages();
+      loadSentHellos();
     }
   }, [currentUser?.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages.length]);
+
+  const loadSentHellos = async () => {
+    const { data } = await sb.from('hellos').select('to_user').eq('from_user', currentUser.id);
+    if (!data || data.length === 0) return;
+    const ids = data.map(h => h.to_user);
+    const { data: profiles } = await sb.from('profiles').select('*').in('id', ids);
+    if (profiles) setSentHelloProfiles(profiles);
+  };
 
   const loadMaybes = async () => {
     const { data } = await sb.from('maybes').select('to_user').eq('from_user', currentUser.id);
@@ -1156,41 +1143,11 @@ function HellosScreen({ currentUser }) {
     setLoading(false);
   };
 
-  const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
-
-  const loadFounderMessages = async () => {
-    if (!currentUser?.id) return;
-    // Fetch in two separate queries — avoids compound OR issues with RLS
-    const { data: received, error: e1 } = await sb.from('messages').select('*')
-      .eq('sender_id', FOUNDER_ID)
-      .eq('recipient_id', currentUser.id)
-      .order('created_at', { ascending: true });
-    if (e1) console.error('loadFounderMessages received error:', e1);
-
-    const { data: sent, error: e2 } = await sb.from('messages').select('*')
-      .eq('sender_id', currentUser.id)
-      .eq('recipient_id', FOUNDER_ID)
-      .order('created_at', { ascending: true });
-    if (e2) console.error('loadFounderMessages sent error:', e2);
-
-    const combined = [...(received || []), ...(sent || [])]
-      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    setFounderMessages(combined);
-  };
-
-  const sendFounderReply = async () => {
-    if (!founderInput.trim() || !currentUser) return;
-    const msg = { sender_id: currentUser.id, recipient_id: FOUNDER_ID, text: founderInput.trim(), read: false };
-    await db.sendMessage(msg);
-    setFounderMessages(prev => [...prev, { ...msg, created_at: new Date().toISOString() }]);
-    setFounderInput('');
-  };
-
   const openConvo = async (hello, mutual) => {
     setActive(hello);
     setIsMutual(mutual);
     if (mutual) {
-      const otherId = hello.from_user === currentUser.id ? hello.to_user : hello.from_user;
+      const otherId = hello.from_user;
       const { data } = await db.getMessages(currentUser.id, otherId);
       if (data) setMessages(data);
     }
@@ -1218,8 +1175,8 @@ function HellosScreen({ currentUser }) {
     setAiLoading(true); setShowIce(true); setIcebreakers([]);
     try {
       const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
-        method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamlwYmR2Y2JtcmtxYWt0Z3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDA4NTksImV4cCI6MjA4OTMxNjg1OX0.A71rpOJ-73_DsefhuLvbViA_wViFvASIlBO6PzQtX0w"},
-        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:400,
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:400,
           system:"Warm dating coach for 50+. Return ONLY a JSON array of 3 icebreaker strings, no markdown.",
           messages:[{ role:"user", content:`3 icebreakers for ${p.first_name} (${p.age}), bio: "${p.bio}", interests: ${(p.interests||[]).join(", ")}. Under 30 words each.` }]
         })
@@ -1234,33 +1191,6 @@ function HellosScreen({ currentUser }) {
 
   const getProfilePhoto = (hello) => hello?.sender?.photo_url || (hello?.sender?.photos && hello?.sender?.photos[0]) || null;
   const getProfileName = (hello) => hello?.sender?.first_name || "Member";
-
-  if (founderThreadOpen) return (
-    <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", background:C.white, zIndex:5 }}>
-      <div style={{ padding:"10px 16px", borderBottom:"1px solid #EAE6E2", display:"flex", alignItems:"center", gap:12 }}>
-        <button onClick={()=>setFounderThreadOpen(false)} style={{ background:"none", border:"none", cursor:"pointer", color:C.coral, fontSize:20 }}>←</button>
-        <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#FFD700,#FFA500)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>👑</div>
-        <div style={{ flex:1 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:C.text }}>Next Hello</div>
-          <div style={{ fontSize:11, color:C.coral, fontFamily:sf }}>Message from the founder</div>
-        </div>
-      </div>
-      <div style={{ flex:1, minHeight:0, overflow:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:8 }}>
-        {founderMessages.length === 0 ? (
-          <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>No messages yet from Next Hello.</div>
-        ) : founderMessages.map((m,i) => (
-          <div key={i} style={{ display:"flex", justifyContent:m.sender_id===currentUser?.id?"flex-end":"flex-start" }}>
-            <div style={{ maxWidth:"78%", padding:"10px 14px", borderRadius:m.sender_id===currentUser?.id?"18px 18px 4px 18px":"18px 18px 18px 4px", background:m.sender_id===currentUser?.id?`linear-gradient(135deg,${C.coral},${C.coralMid})`:m.text.startsWith('👑')?'linear-gradient(135deg,#FFF9E0,#FFF3C0)':C.offWhite, color:m.sender_id===currentUser?.id?C.white:C.text, fontSize:14, lineHeight:1.6, fontFamily:sf, border:m.sender_id!==currentUser?.id&&m.text.startsWith('👑')?'1px solid #FFD700':'none', whiteSpace:"pre-wrap" }}>{m.text}</div>
-          </div>
-        ))}
-        <div ref={bottomRef}/>
-      </div>
-      <div style={{ padding:"10px 14px 20px", borderTop:"1px solid #EAE6E2", display:"flex", gap:8 }}>
-        <input value={founderInput} onChange={e=>setFounderInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendFounderReply()} placeholder="Reply to Next Hello..." style={{ flex:1, padding:"11px 16px", borderRadius:24, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, fontFamily:sf }}/>
-        <button onClick={sendFounderReply} style={{ width:42, height:42, borderRadius:"50%", background:C.coral, border:"none", color:C.white, fontSize:16, cursor:"pointer" }}>→</button>
-      </div>
-    </div>
-  );
 
   if (active) return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
@@ -1327,10 +1257,10 @@ function HellosScreen({ currentUser }) {
       <div style={{ padding:"16px 20px 12px", borderBottom:"1px solid #EAE6E2" }}>
         <div style={{ fontSize:24, fontWeight:700, color:C.coral }}>Hellos</div>
         {/* Tabs */}
-        <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
-          {[['received','👋 Received'],['matches','💕 Matches'],['maybe','🤔 Maybe'],['nexthello','📩 Founder']].map(([id,label]) => (
+        <div style={{ display:"flex", gap:8, marginTop:10, overflowX:"auto", scrollbarWidth:"none" }}>
+          {[['received','👋 Received'],['matches','💕 Matches'],['sent','💌 Sent'],['maybe','🤔 Maybe']].map(([id,label]) => (
             <button key={id} onClick={()=>setTab(id)} style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${tab===id?C.coral:"#DDD8D4"}`, background:tab===id?C.coralPale:C.white, color:tab===id?C.coral:C.muted, fontSize:12, fontWeight:tab===id?700:400, cursor:"pointer", fontFamily:sf, flexShrink:0 }}>
-              {label} {id==='matches' && mutualHellos.length > 0 ? `(${mutualHellos.length})` : id==='received' && hellos.length > 0 ? `(${hellos.length})` : id==='maybe' && maybeProfiles.length > 0 ? `(${maybeProfiles.length})` : id==='nexthello' && founderMessages.length > 0 ? `(${founderMessages.length})` : ''}
+              {label} {id==='matches' && mutualHellos.length > 0 ? `(${mutualHellos.length})` : id==='received' && hellos.length > 0 ? `(${hellos.length})` : id==='maybe' && maybeProfiles.length > 0 ? `(${maybeProfiles.length})` : id==='sent' && sentHelloProfiles.length > 0 ? `(${sentHelloProfiles.length})` : ''}
             </button>
           ))}
         </div>
@@ -1338,17 +1268,29 @@ function HellosScreen({ currentUser }) {
       <div style={{ flex:1, overflow:"auto" }}>
         {loading ? (
           <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>Loading...</div>
-        ) : tab === 'nexthello' ? (
-          <div onClick={()=>setFounderThreadOpen(true)} style={{ display:"flex", alignItems:"center", gap:12, padding:"16px 18px", borderBottom:"1px solid #F0EBE8", cursor:"pointer", background:"linear-gradient(135deg,#FFFDF0,#FFF9E0)" }}>
-            <div style={{ width:50, height:50, borderRadius:"50%", background:"linear-gradient(135deg,#FFD700,#FFA500)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>👑</div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight:700, fontSize:15, color:C.text }}>Next Hello</div>
-              <div style={{ fontSize:13, color:C.muted, fontFamily:sf }}>
-                {founderMessages.length > 0 ? founderMessages[founderMessages.length-1].text.replace(/👑 Message from Next Hello founder:\n\n/,'').substring(0,60)+'…' : 'Messages from the founder'}
-              </div>
+        ) : tab === 'sent' ? (
+          sentHelloProfiles.length === 0 ? (
+            <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>💌 No Hellos sent yet.<br/>Browse profiles and tap Hello to connect!</div>
+          ) : (
+            <div>
+              <div style={{ padding:"10px 18px", fontSize:12, color:C.muted, fontFamily:sf, background:"#FFF0EB", borderBottom:"1px solid #F0EBE8" }}>People you said Hello to — waiting for them to Hello back</div>
+              {sentHelloProfiles.map(p => {
+                const photo = p.photos?.[0] || p.photo_url;
+                const isMutualMatch = mutualHellos.some(m => m.from_user === p.id);
+                return (
+                  <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8", background:isMutualMatch?"rgba(200,97,74,0.04)":"transparent" }}>
+                    {photo ? <img src={photo} style={{ width:50, height:50, borderRadius:"50%", objectFit:"cover", border:isMutualMatch?`2px solid ${C.coral}`:"none" }} alt=""/> : <div style={{ width:50, height:50, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>👤</div>}
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:700, fontSize:15, color:C.text }}>{p.first_name}{p.age ? `, ${p.age}` : ''}</div>
+                      <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{p.location || ''}</div>
+                    </div>
+                    {isMutualMatch && <div style={{ fontSize:12, fontWeight:700, color:C.coral, fontFamily:sf }}>💕 Matched!</div>}
+                    {!isMutualMatch && <div style={{ fontSize:11, color:C.muted, fontFamily:sf }}>Awaiting Hello back</div>}
+                  </div>
+                );
+              })}
             </div>
-            <div style={{ fontSize:12, color:C.coral, fontFamily:sf, fontWeight:600 }}>{founderMessages.length > 0 ? `${founderMessages.length} msg${founderMessages.length>1?'s':''}` : ''}</div>
-          </div>
+          )
         ) : tab === 'maybe' ? (
           maybeProfiles.length === 0 ? (
             <div style={{ padding:40, textAlign:"center", color:C.muted, fontSize:14, fontFamily:sf, lineHeight:1.7 }}>🤔 No Maybe profiles yet.<br/>Tap Maybe when browsing to save profiles for later.</div>
@@ -1358,13 +1300,13 @@ function HellosScreen({ currentUser }) {
               {maybeProfiles.map(p => {
                 const photo = p.photos?.[0] || p.photo_url;
                 return (
-                  <div key={p.id} onClick={()=>setSelectedMaybeProfile(p)} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8", cursor:"pointer" }}>
+                  <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 18px", borderBottom:"1px solid #F0EBE8" }}>
                     {photo ? <img src={photo} style={{ width:50, height:50, borderRadius:"50%", objectFit:"cover" }} alt=""/> : <div style={{ width:50, height:50, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>👤</div>}
                     <div style={{ flex:1 }}>
                       <div style={{ fontWeight:700, fontSize:15, color:C.text }}>{p.first_name}{p.age ? `, ${p.age}` : ''}</div>
                       <div style={{ fontSize:12, color:C.muted, fontFamily:sf }}>{p.location || ''}</div>
                     </div>
-                    <span style={{ fontSize:12, color:C.muted, fontFamily:sf }}>View →</span>
+                    <button onClick={async()=>{ await sb.rpc('send_hello',{p_from:currentUser.id,p_to:p.id}); await sb.from('maybes').delete().eq('from_user',currentUser.id).eq('to_user',p.id); setMaybeProfiles(prev=>prev.filter(x=>x.id!==p.id)); showToast && showToast(`Hello sent to ${p.first_name}! 💕`); }} style={{ padding:"8px 14px", borderRadius:20, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💕 Hello</button>
                   </div>
                 );
               })}
@@ -1400,54 +1342,6 @@ function HellosScreen({ currentUser }) {
           );
         })}
       </div>
-
-      {/* Maybe profile detail modal */}
-      {selectedMaybeProfile && (
-        <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.92)", display:"flex", flexDirection:"column", zIndex:10 }}>
-          <div style={{ flex:1, overflow:"auto", padding:"20px 20px 16px" }}>
-            <button onClick={()=>setSelectedMaybeProfile(null)} style={{ background:C.darkCard, border:"none", borderRadius:"50%", width:36, height:36, color:C.white, fontSize:18, cursor:"pointer", marginBottom:16 }}>✕</button>
-            {(selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url) && (
-              <img src={selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url} alt={selectedMaybeProfile.first_name} onClick={()=>setZoomPhoto(selectedMaybeProfile.photos?.[0] || selectedMaybeProfile.photo_url)} style={{ width:"100%", borderRadius:20, objectFit:"cover", maxHeight:280, marginBottom:16, cursor:"zoom-in" }}/>
-            )}
-            {selectedMaybeProfile.photos?.length > 1 && (
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginBottom:16 }}>
-                {selectedMaybeProfile.photos.slice(1).map((p,i) => (
-                  <img key={i} src={p} onClick={()=>setZoomPhoto(p)} style={{ width:"100%", aspectRatio:"1", objectFit:"cover", borderRadius:12, cursor:"zoom-in" }} alt=""/>
-                ))}
-              </div>
-            )}
-            <div style={{ fontSize:26, fontWeight:700, color:C.white }}>{selectedMaybeProfile.first_name}{selectedMaybeProfile.age ? `, ${selectedMaybeProfile.age}` : ''}</div>
-            <div style={{ fontSize:13, color:C.muted, marginBottom:12, fontFamily:sf }}>📍 {selectedMaybeProfile.location}</div>
-            <p style={{ fontSize:14, color:"rgba(255,255,255,0.8)", lineHeight:1.7, fontFamily:sf, whiteSpace:"pre-wrap" }}>{selectedMaybeProfile.bio}</p>
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:14, marginBottom:8 }}>
-              {(selectedMaybeProfile.interests||[]).map(tag => (
-                <span key={tag} style={{ background:C.coralPale, borderRadius:20, padding:"5px 14px", fontSize:12, color:C.coral, fontWeight:600, fontFamily:sf }}>{tag}</span>
-              ))}
-            </div>
-          </div>
-          <div style={{ padding:"12px 20px 20px", flexShrink:0, display:"flex", gap:10 }}>
-            <button onClick={async()=>{
-              await sb.from('maybes').delete().eq('from_user',currentUser.id).eq('to_user',selectedMaybeProfile.id);
-              setMaybeProfiles(prev=>prev.filter(x=>x.id!==selectedMaybeProfile.id));
-              setSelectedMaybeProfile(null);
-            }} style={{ flex:1, padding:"14px", borderRadius:18, background:C.darkCard, border:`1px solid ${C.darkBorder}`, color:C.muted, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:sf }}>🗑 Remove</button>
-            <button onClick={async()=>{
-              await sb.rpc('send_hello',{p_from:currentUser.id,p_to:selectedMaybeProfile.id});
-              await sb.from('maybes').delete().eq('from_user',currentUser.id).eq('to_user',selectedMaybeProfile.id);
-              setMaybeProfiles(prev=>prev.filter(x=>x.id!==selectedMaybeProfile.id));
-              setSelectedMaybeProfile(null);
-            }} style={{ flex:2, padding:"14px", borderRadius:18, background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, border:"none", color:C.white, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:sf }}>💕 Hello to {selectedMaybeProfile.first_name}</button>
-          </div>
-        </div>
-      )}
-
-      {/* Zoom modal for Maybe profile photos */}
-      {zoomPhoto && (
-        <div onClick={()=>setZoomPhoto(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, cursor:"zoom-out" }}>
-          <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
-          <img src={zoomPhoto} style={{ maxWidth:"95vw", maxHeight:"90vh", borderRadius:16, objectFit:"contain" }} alt=""/>
-        </div>
-      )}
     </div>
   );
 }
@@ -1640,7 +1534,7 @@ function OffersScreen() {
   );
 }
 
-function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onViewHelp, onPrefsUpdated, onViewSuggestions }) {
+function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules }) {
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
@@ -1657,14 +1551,13 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
   const [uploadingSlot, setUploadingSlot] = useState(null);
   const [profileError, setProfileError] = useState(null);
 
-  useEffect(() => { loadProfile(); }, [currentUser?.id]);
+  useEffect(() => { loadProfile(); }, [currentUser]);
 
   const loadProfile = async () => {
     if (!currentUser?.id) return;
     setProfileError(null);
     try {
       const { data, error } = await db.getProfile(currentUser.id);
-      console.log('loadProfile — id:', currentUser.id, '| data:', data, '| error:', error);
       if (error) { setProfileError(error.message); return; }
       if (data) {
         // Ensure all fields have safe defaults
@@ -1679,10 +1572,7 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
       } else {
         setProfileError('Profile not found. Please contact support.');
       }
-    } catch(e) { 
-      console.error('loadProfile EXCEPTION:', e);
-      setProfileError(e.message + ' (check console for details)'); 
-    }
+    } catch(e) { setProfileError(e.message); }
   };
 
   // Get photos array from profile (up to 6)
@@ -1724,7 +1614,6 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
       const { error } = await db.saveProfile({ ...draft, id: currentUser.id });
       if (error) { alert('Could not save: ' + error.message); setSaving(false); return; }
       setProfile(draft); setEditing(false); setShowAI(false);
-      if (onPrefsUpdated) onPrefsUpdated(currentUser);
     } catch(e) { alert('Save failed: ' + e.message); }
     setSaving(false);
   };
@@ -1733,8 +1622,8 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
     setAiLoading(true); setShowAI(true); setAiBios([]);
     try {
       const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
-        method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamlwYmR2Y2JtcmtxYWt0Z3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDA4NTksImV4cCI6MjA4OTMxNjg1OX0.A71rpOJ-73_DsefhuLvbViA_wViFvASIlBO6PzQtX0w"},
-        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:500,
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:500,
           system:"Dating profile coach for 50+. Return ONLY a JSON array of 3 bio strings, no markdown.",
           messages:[{ role:"user", content:`3 bios for ${draft.first_name}, ${draft.age}, ${draft.location}, interests: ${(draft.interests||[]).join(", ")}. 2-3 sentences, max 60 words, warm.` }]
         })
@@ -1855,24 +1744,6 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
             <div style={{ marginLeft:"auto", fontSize:18, color:C.coral }}>›</div>
           </div>
 
-          <div onClick={onViewSuggestions} style={{ marginTop:10, background:"#F0F4FF", border:"1.5px solid #B0C4FF", borderRadius:16, padding:"14px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:40, height:40, borderRadius:"50%", background:"#5C7CFF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>💡</div>
-            <div>
-              <div style={{ fontSize:14, fontWeight:700, color:"#3D5AFE" }}>Suggestions & Feedback</div>
-              <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>Got an idea? Paul reads every message personally</div>
-            </div>
-            <div style={{ marginLeft:"auto", fontSize:18, color:"#5C7CFF" }}>›</div>
-          </div>
-
-          <div onClick={onViewHelp} style={{ marginTop:10, background:"#F5F0FF", border:"1.5px solid #C4A8FF", borderRadius:16, padding:"14px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:40, height:40, borderRadius:"50%", background:"#7C3AED", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🤖</div>
-            <div>
-              <div style={{ fontSize:14, fontWeight:700, color:"#7C3AED" }}>Ask Nell — AI Help</div>
-              <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:2 }}>Get instant help with anything in the app</div>
-            </div>
-            <div style={{ marginLeft:"auto", fontSize:18, color:"#7C3AED" }}>›</div>
-          </div>
-
           {/* Danger zone */}
           <div style={{ marginTop:20, borderTop:"1px solid #EAE6E2", paddingTop:16 }}>
             <div style={{ fontSize:11, fontWeight:600, color:C.muted, letterSpacing:"0.08em", fontFamily:sf, marginBottom:10 }}>ACCOUNT</div>
@@ -1928,21 +1799,6 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
               <div style={{ flex:1 }}>
                 <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>LAST NAME</label>
                 <input value={draft.last_name||""} onChange={e=>setDraft(d=>({...d,last_name:e.target.value}))} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
-              </div>
-            </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <div style={{ flex:1 }}>
-                <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>AGE</label>
-                <input type="number" min={50} max={99} value={draft.age||""} onChange={e=>{ const v = parseInt(e.target.value); if (!isNaN(v) && v >= 50 && v <= 99) setDraft(d=>({...d, age:v})); }} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}/>
-              </div>
-              <div style={{ flex:1 }}>
-                <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:4 }}>GENDER</label>
-                <select value={draft.gender||""} onChange={e=>setDraft(d=>({...d,gender:e.target.value}))} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf }}>
-                  <option value="">Select...</option>
-                  <option value="Man">Man</option>
-                  <option value="Woman">Woman</option>
-                  <option value="Non-binary">Non-binary</option>
-                </select>
               </div>
             </div>
             <div>
@@ -2009,35 +1865,6 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
               </div>
               <p style={{ fontSize:11, color:C.muted, fontFamily:sf, marginTop:6, lineHeight:1.5 }}>✨ Custom interests are shared with the community</p>
             </div>
-            {/* Match preferences */}
-            <div style={{ borderTop:"1px solid #EAE6E2", paddingTop:12 }}>
-              <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>LOOKING FOR</label>
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                {["Men","Women","Everyone"].map(g => {
-                  const active = (draft.interested_in||[]).includes(g);
-                  return (
-                    <button key={g} onClick={()=>setDraft(d=>({ ...d, interested_in: active ? (d.interested_in||[]).filter(x=>x!==g) : [...(d.interested_in||[]), g] }))} style={{ padding:"8px 18px", borderRadius:22, cursor:"pointer", border:`1.5px solid ${active?C.coral:"#DDD8D4"}`, background:active?C.coralPale:C.white, color:active?C.coral:C.muted, fontSize:13, fontWeight:active?600:400, fontFamily:sf }}>
-                      {g}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>AGE RANGE</label>
-              <div style={{ display:"flex", justifyContent:"space-around", marginBottom:10 }}>
-                <div style={{ textAlign:"center" }}><div style={{ fontSize:24, fontWeight:700, color:C.coral }}>{draft.age_min||50}</div><div style={{ fontSize:10, color:C.muted, fontFamily:sf }}>MIN</div></div>
-                <div style={{ textAlign:"center" }}><div style={{ fontSize:24, fontWeight:700, color:C.coral }}>{(draft.age_max||85)>=85?"85+":(draft.age_max||85)}</div><div style={{ fontSize:10, color:C.muted, fontFamily:sf }}>MAX</div></div>
-              </div>
-              <div style={{ marginBottom:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span style={{ fontSize:11, color:C.muted, fontFamily:sf }}>Minimum age</span><span style={{ fontSize:11, fontWeight:600, color:C.coral, fontFamily:sf }}>{draft.age_min||50}</span></div>
-                <input type="range" min={50} max={83} value={draft.age_min||50} onChange={e=>setDraft(d=>({...d, age_min:Math.min(+e.target.value,(d.age_max||85)-2)}))} style={{ width:"100%", accentColor:C.coral }}/>
-              </div>
-              <div>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span style={{ fontSize:11, color:C.muted, fontFamily:sf }}>Maximum age</span><span style={{ fontSize:11, fontWeight:600, color:C.coral, fontFamily:sf }}>{(draft.age_max||85)>=85?"85+":(draft.age_max||85)}</span></div>
-                <input type="range" min={52} max={85} value={draft.age_max||85} onChange={e=>setDraft(d=>({...d, age_max:Math.max(+e.target.value,(d.age_min||50)+2)}))} style={{ width:"100%", accentColor:C.coral }}/>
-              </div>
-            </div>
             <div style={{ display:"flex", gap:10 }}>
               <Btn outline onClick={()=>{ setEditing(false); setShowAI(false); }}>Cancel</Btn>
               <Btn onClick={save} disabled={saving}>{saving?"Saving...":"Save"}</Btn>
@@ -2048,10 +1875,10 @@ function ProfileScreen({ currentUser, onSignOut, onViewIntro, onViewRules, onVie
 
       {/* Photo zoom modal */}
       {zoomPhoto && (
-        <div onClick={()=>setZoomPhoto(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, cursor:"zoom-out" }}>
+        <div onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:50, cursor:"zoom-out" }}>
           <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
-          <img src={zoomPhoto} style={{ maxWidth:"95vw", maxHeight:"90vh", borderRadius:16, objectFit:"contain", boxShadow:"0 8px 40px rgba(0,0,0,0.8)" }} alt=""/>
-          <p style={{ position:"absolute", bottom:20, color:"rgba(255,255,255,0.4)", fontSize:12, fontFamily:"system-ui" }}>Tap anywhere to close</p>
+          <img src={zoomPhoto} style={{ maxWidth:"95%", maxHeight:"90%", borderRadius:16, objectFit:"contain", boxShadow:"0 8px 40px rgba(0,0,0,0.8)" }} alt=""/>
+          <p style={{ position:"absolute", bottom:20, color:"rgba(255,255,255,0.4)", fontSize:12, fontFamily:sf }}>Tap anywhere to close</p>
         </div>
       )}
     </div>
@@ -2064,16 +1891,12 @@ function AdminScreen({ currentUser }) {
   const [reports, setReports] = useState([]);
   const [events, setEvents] = useState([]);
   const [customInterests, setCustomInterests] = useState([]);
-  const [suggestionsList, setSuggestionsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
   const [messageTarget, setMessageTarget] = useState(null);
   const [messageText, setMessageText] = useState('');
   const [messageSending, setMessageSending] = useState(false);
-  const [viewMsgMember, setViewMsgMember] = useState(null);
-  const [viewMsgs, setViewMsgs] = useState([]);
-  const [welcomeSentIds, setWelcomeSentIds] = useState(new Set());
 
   const QUICK_MESSAGES = [
     `Hi! Could you please update your profile photo to a clear, recent photo of your face? Members with face photos get far more Hellos! 😊`,
@@ -2102,10 +1925,6 @@ function AdminScreen({ currentUser }) {
     if (adminTab === 'members') {
       const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
       if (data) setMembers(data);
-      // Load which members have already received a welcome message
-      const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
-      const { data: welcomed } = await sb.from('messages').select('recipient_id').eq('sender_id', FOUNDER_ID);
-      if (welcomed) setWelcomeSentIds(new Set(welcomed.map(m => m.recipient_id)));
     }
     if (adminTab === 'reports') {
       const { data } = await sb.from('reports').select('*, reporter:profiles!reports_reporter_id_fkey(first_name,last_name), reported:profiles!reports_reported_id_fkey(first_name,last_name)').order('created_at', { ascending: false });
@@ -2118,19 +1937,6 @@ function AdminScreen({ currentUser }) {
     if (adminTab === 'interests') {
       const { data } = await sb.from('custom_interests').select('*').order('count', { ascending: false });
       if (data) setCustomInterests(data);
-    }
-    if (adminTab === 'messages') {
-      const { data } = await sb.from('profiles').select('id, first_name, last_name, photo_url').order('first_name', { ascending: true });
-      if (data) setMembers(data);
-    }
-    if (adminTab === 'suggestions') {
-      const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
-      const { data } = await sb.from('messages')
-        .select('*')
-        .eq('recipient_id', FOUNDER_ID)
-        .ilike('text', '💡 Suggestion from%')
-        .order('created_at', { ascending: false });
-      if (data) setSuggestionsList(data);
     }
     setLoading(false);
   };
@@ -2192,8 +1998,6 @@ function AdminScreen({ currentUser }) {
     { id:'reports', label:'🚩 Reports' },
     { id:'events', label:'🎉 Events' },
     { id:'interests', label:'✨ Interests' },
-    { id:'messages', label:'💬 Msgs' },
-    { id:'suggestions', label:'💡 Ideas' },
   ];
 
   return (
@@ -2208,9 +2012,9 @@ function AdminScreen({ currentUser }) {
           </div>
         </div>
         {/* Admin tabs */}
-        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:4, overflowX:"auto" }}>
           {ADMIN_TABS.map(t => (
-            <button key={t.id} onClick={()=>setAdminTab(t.id)} style={{ padding:"8px 10px", borderRadius:"10px 10px 0 0", background:adminTab===t.id?"#FFD700":"rgba(255,255,255,0.08)", border:"none", color:adminTab===t.id?"#1E1C1B":"rgba(255,255,255,0.6)", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf, whiteSpace:"nowrap", flexShrink:0 }}>
+            <button key={t.id} onClick={()=>setAdminTab(t.id)} style={{ padding:"8px 14px", borderRadius:"10px 10px 0 0", background:adminTab===t.id?"#FFD700":"rgba(255,255,255,0.08)", border:"none", color:adminTab===t.id?"#1E1C1B":"rgba(255,255,255,0.6)", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:sf, whiteSpace:"nowrap", flexShrink:0 }}>
               {t.label}
             </button>
           ))}
@@ -2263,17 +2067,6 @@ function AdminScreen({ currentUser }) {
                     <button onClick={async()=>{ await sb.from('profiles').update({ founding_member:!m.founding_member }).eq('id',m.id); showToast(m.founding_member?'VIP removed':'VIP granted'); loadAll(); }} style={{ padding:"5px 12px", borderRadius:20, background:"rgba(255,215,0,0.15)", border:"1px solid #FFD700", color:"#B8860B", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>
                       {m.founding_member ? '👑 Remove VIP' : '👑 Grant VIP'}
                     </button>
-                    {welcomeSentIds.has(m.id) ? (
-                      <span style={{ padding:"5px 12px", borderRadius:20, background:"#E8F5E9", border:"1px solid #A5D6A7", color:"#2E7D32", fontSize:11, fontWeight:700, fontFamily:sf }}>✅ Welcome sent</span>
-                    ) : (
-                      <button onClick={async()=>{
-                        try {
-                          await sb.rpc('send_welcome_message', { p_recipient: m.id });
-                          setWelcomeSentIds(prev => new Set([...prev, m.id]));
-                          showToast(`Welcome message sent to ${m.first_name} ✅`);
-                        } catch(e) { showToast('Failed to send welcome message'); }
-                      }} style={{ padding:"5px 12px", borderRadius:20, background:"#FFF3E0", border:"1px solid #FFCC80", color:"#E65100", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:sf }}>👋 Send Welcome</button>
-                    )}
                   </div>
                 </div>
               ))}
@@ -2350,72 +2143,6 @@ function AdminScreen({ currentUser }) {
             ))}
           </div>
         )}
-
-        {!loading && adminTab === 'messages' && (
-          <div>
-            {!viewMsgMember ? (
-              <>
-                <div style={{ padding:"12px 16px", background:C.white, borderBottom:"1px solid #EAE6E2", fontSize:12, color:C.muted, fontFamily:sf }}>Select a member to view their messages</div>
-                {members.map(m => (
-                  <div key={m.id} onClick={async()=>{
-                    setViewMsgMember(m);
-                    const { data } = await sb.from('messages').select('*').or(`recipient_id.eq.${m.id},sender_id.eq.${m.id}`).order('created_at', { ascending: true });
-                    const memberIds = [...new Set((data||[]).flatMap(msg => [msg.sender_id, msg.recipient_id]))];
-                    const { data: profiles } = await sb.from('profiles').select('id, first_name').in('id', memberIds);
-                    const nameMap = {};
-                    (profiles||[]).forEach(p => { nameMap[p.id] = p.first_name; });
-                    setViewMsgs((data||[]).map(msg => ({ ...msg, senderName: nameMap[msg.sender_id] || 'Unknown' })));
-                  }} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", borderBottom:"1px solid #F0EBE8", cursor:"pointer" }}>
-                    {m.photo_url ? <img src={m.photo_url} style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover" }} alt=""/> : <div style={{ width:36, height:36, borderRadius:"50%", background:C.coralPale, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👤</div>}
-                    <div style={{ fontSize:14, fontWeight:600, color:C.text }}>{m.first_name} {m.last_name||''}</div>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <>
-                <div style={{ padding:"12px 16px", background:C.white, borderBottom:"1px solid #EAE6E2", display:"flex", alignItems:"center", gap:10 }}>
-                  <button onClick={()=>{ setViewMsgMember(null); setViewMsgs([]); }} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:C.coral, padding:0 }}>←</button>
-                  <div style={{ fontSize:14, fontWeight:700, color:C.text }}>Messages — {viewMsgMember.first_name}</div>
-                  <div style={{ fontSize:11, color:C.muted, fontFamily:sf, marginLeft:"auto" }}>{viewMsgs.length} message{viewMsgs.length!==1?'s':''}</div>
-                </div>
-                {viewMsgs.length === 0 ? (
-                  <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>No messages found</div>
-                ) : viewMsgs.map((msg, i) => (
-                  <div key={i} style={{ padding:"12px 16px", borderBottom:"1px solid #F0EBE8", background:C.white }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:C.coral, fontFamily:sf }}>From: {msg.senderName}</div>
-                      <div style={{ fontSize:11, color:C.muted, fontFamily:sf }}>{new Date(msg.created_at).toLocaleString('en-GB', { dateStyle:'short', timeStyle:'short' })}</div>
-                    </div>
-                    <div style={{ fontSize:13, color:C.text, fontFamily:sf, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{msg.text}</div>
-                    {!msg.read && <div style={{ fontSize:10, color:C.coral, fontFamily:sf, marginTop:4 }}>● Unread</div>}
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        )}
-
-        {!loading && adminTab === 'suggestions' && (
-          <div>
-            <div style={{ padding:"12px 16px", background:C.white, borderBottom:"1px solid #EAE6E2", fontSize:12, color:C.muted, fontFamily:sf }}>
-              {suggestionsList.length} suggestion{suggestionsList.length !== 1 ? 's' : ''} received
-            </div>
-            {suggestionsList.length === 0 ? (
-              <div style={{ padding:40, textAlign:"center", color:C.muted, fontFamily:sf }}>No suggestions yet</div>
-            ) : suggestionsList.map((msg, i) => (
-              <div key={i} style={{ background:C.white, borderBottom:"1px solid #F0EBE8", padding:"14px 16px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:"#3D5AFE", fontFamily:sf }}>💡 {msg.text.match(/💡 Suggestion from ([^\n:]+)/)?.[1] || 'Member'}</div>
-                  <div style={{ fontSize:11, color:C.muted, fontFamily:sf }}>{new Date(msg.created_at).toLocaleString('en-GB', { dateStyle:'short', timeStyle:'short' })}</div>
-                </div>
-                <div style={{ fontSize:13, color:C.text, fontFamily:sf, lineHeight:1.6, whiteSpace:"pre-wrap" }}>
-                  {msg.text.replace(/^💡 Suggestion from [^\n]+:\n\n/, '')}
-                </div>
-                {!msg.read && <div style={{ fontSize:10, color:"#3D5AFE", fontFamily:sf, marginTop:6 }}>● Unread</div>}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Message Member Modal */}
@@ -2464,26 +2191,16 @@ Key facts:
 - Report & Block: flag icon on any profile
 - Contact: hello@nexthello.co.uk
 
-PROFILE WRITING MODE:
-If the user asks to help write, improve, or create their dating profile — do NOT give generic advice. Instead, run an interactive guided flow, asking ONE question at a time in this order:
-1. "What's your name, and whereabouts in the UK are you based?"
-2. "How would your closest friends describe you in three words?"
-3. "What do you love doing with your free time? (hobbies, interests, passions)"
-4. "What does a perfect weekend look like for you?"
-5. "What kind of person are you hoping to meet — what matters most to you in someone?"
-6. "Is there anything else you'd like people to know about you — something that makes you, you?"
-After each answer, acknowledge warmly and ask the next question. Once you have all answers, write them a warm, genuine, natural-sounding dating profile (2-3 short paragraphs). Then offer to tweak the tone if they want it more playful, more heartfelt, or shorter.
-
 Keep responses warm, concise and friendly. If unsure, direct to hello@nexthello.co.uk.`;
 
 const SUGGESTED_QUESTIONS = [
-  "✍️ Help me write my profile",
   "How does the Hello system work?",
   "How do I add more photos?",
   "What is VIP Founding Member status?",
   "How do I report someone?",
   "Can I delete my account?",
   "How much does it cost?",
+  "How do I create an event?",
   "Why can't I message someone?",
 ];
 
@@ -2507,21 +2224,16 @@ function HelpScreen({ onBack, currentUser }) {
     try {
       const res = await fetch("https://gmjipbdvcbmrkqaktguw.supabase.co/functions/v1/claude-proxy", {
         method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamlwYmR2Y2JtcmtxYWt0Z3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDA4NTksImV4cCI6MjA4OTMxNjg1OX0.A71rpOJ-73_DsefhuLvbViA_wViFvASIlBO6PzQtX0w",
-        },
+        headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5",
+          model:"claude-sonnet-4-20250514",
           max_tokens:1000,
           system: HELP_SYSTEM_PROMPT,
           messages: newMessages.map(m => ({ role:m.role, content:m.content })),
         })
       });
       const data = await res.json();
-      const reply =
-        data?.content?.[0]?.text ||
-        "I'm not sure about that one! Please email hello@nexthello.co.uk and Paul will help you personally. 😊";
+      const reply = data.content?.[0]?.text || "I'm not sure about that one! Please email hello@nexthello.co.uk and Paul will help you personally. 😊";
       setMessages(prev => [...prev, { role:'assistant', content:reply }]);
     } catch(e) {
       setMessages(prev => [...prev, { role:'assistant', content:"Oops, something went wrong at my end! Please try again or email hello@nexthello.co.uk 😊" }]);
@@ -2578,61 +2290,43 @@ function HelpScreen({ onBack, currentUser }) {
   );
 }
 
-function SuggestionsScreen({ onBack, currentUser }) {
-  const [text, setText] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const FOUNDER_ID = '8462681f-1c56-4794-8b03-e1b2987c9096';
+// ── Reset Password Screen ─────────────────────────────────
+function ResetPasswordScreen({ onDone }) {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
 
-  const send = async () => {
-    if (!text.trim()) return;
-    setSending(true);
-    try {
-      await sb.from('messages').insert({
-        sender_id: currentUser.id,
-        recipient_id: FOUNDER_ID,
-        text: `💡 Suggestion from ${currentUser.email}:\n\n${text.trim()}`,
-        read: false,
-      });
-      setSent(true);
-      setText('');
-    } catch(e) { alert('Failed to send. Please try again.'); }
-    setSending(false);
+  const submit = async () => {
+    if (password.length < 8) { setErr('Password must be at least 8 characters.'); return; }
+    if (password !== confirm) { setErr('Passwords do not match.'); return; }
+    setLoading(true); setErr('');
+    const { error } = await sb.auth.updateUser({ password });
+    if (error) { setErr(error.message); setLoading(false); return; }
+    setDone(true);
+    setTimeout(() => { window.location.hash = ''; onDone(); }, 2500);
   };
 
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
-      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"14px 20px 24px", flexShrink:0 }}>
-        <button onClick={onBack} style={{ background:"none", border:"none", color:C.white, fontSize:22, cursor:"pointer", marginBottom:10, padding:0 }}>←</button>
-        <div style={{ fontSize:22, fontWeight:700, color:C.white }}>Suggestions</div>
-        <div style={{ fontSize:13, color:"rgba(255,255,255,0.8)", fontFamily:sf, marginTop:4 }}>Help us improve Next Hello</div>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white, overflow:"hidden" }}>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"40px 24px 28px" }}>
+        <div style={{ fontSize:26, fontWeight:700, color:C.white }}>New Password</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)", fontFamily:sf, marginTop:4 }}>Choose a new password for your account</div>
       </div>
-      <div style={{ flex:1, overflow:"auto", padding:"24px 20px" }}>
-        <div style={{ background:C.coralPale, borderRadius:14, padding:"14px 16px", marginBottom:20 }}>
-          <p style={{ fontSize:13, color:C.coral, fontFamily:sf, margin:0, lineHeight:1.7 }}>
-            💡 Got an idea, spotted a bug, or just want to say something? Paul reads every message personally. Nothing is too small.
-          </p>
-        </div>
-        {sent ? (
-          <div style={{ background:"#E8F5E9", borderRadius:16, padding:"24px 20px", textAlign:"center" }}>
-            <div style={{ fontSize:32, marginBottom:12 }}>💕</div>
-            <div style={{ fontSize:16, fontWeight:700, color:"#2E7D32", marginBottom:8 }}>Thank you!</div>
-            <div style={{ fontSize:13, color:"#388E3C", fontFamily:sf, lineHeight:1.7 }}>Your suggestion has been sent to Paul. We really appreciate you taking the time. One Hello can change everything — and so can one good idea.</div>
-            <button onClick={()=>setSent(false)} style={{ marginTop:16, padding:"10px 24px", borderRadius:20, background:C.coral, border:"none", color:C.white, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:sf }}>Send another</button>
+      <div style={{ padding:"28px 24px", flex:1 }}>
+        {done ? (
+          <div style={{ textAlign:"center", padding:"40px 0" }}>
+            <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
+            <div style={{ fontSize:18, fontWeight:700, color:C.text, marginBottom:8 }}>Password updated!</div>
+            <div style={{ fontSize:13, color:C.muted, fontFamily:sf }}>Taking you back to the app...</div>
           </div>
         ) : (
           <>
-            <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>YOUR SUGGESTION</label>
-            <textarea
-              value={text}
-              onChange={e=>setText(e.target.value)}
-              placeholder="What would make Next Hello better for you?"
-              rows={6}
-              style={{ width:"100%", padding:"14px", borderRadius:14, border:"1.5px solid #DDD8D4", outline:"none", resize:"none", fontSize:14, background:C.offWhite, color:C.text, boxSizing:"border-box", fontFamily:sf, lineHeight:1.6, marginBottom:16 }}
-            />
-            <Btn onClick={send} disabled={!text.trim() || sending}>
-              {sending ? "Sending..." : "Send Suggestion 💡"}
-            </Btn>
+            <InputField label="NEW PASSWORD (min. 8 characters)" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Choose a strong password"/>
+            <InputField label="CONFIRM NEW PASSWORD" type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Repeat your new password"/>
+            {err && <p style={{ fontSize:13, color:C.coral, fontFamily:sf, marginBottom:12 }}>{err}</p>}
+            <Btn onClick={submit} disabled={loading}>{loading ? "Updating..." : "Set New Password"}</Btn>
           </>
         )}
       </div>
@@ -2754,6 +2448,12 @@ function App() {
   };
 
   useEffect(() => {
+    // Check for password reset hash in URL
+    if (window.location.hash === '#reset-password') {
+      setScreen("reset-password");
+      setLoading(false);
+      return;
+    }
     // Check if already logged in
     auth.getUser().then(({ data }) => {
       if (data?.user) { setCurrentUser(data.user); loadUserPrefs(data.user); setScreen("app"); }
@@ -2761,6 +2461,7 @@ function App() {
     });
     // Listen for auth changes
     const { data: { subscription } } = auth.onAuthChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') { setScreen("reset-password"); return; }
       if (session?.user) { setCurrentUser(session.user); loadUserPrefs(session.user); setScreen("app"); }
       else { setCurrentUser(null); setScreen("splash"); }
     });
@@ -2776,159 +2477,84 @@ function App() {
 
 // ── Photo Upload Screen (mandatory after registration) ────
 function PhotoUploadScreen({ currentUser, onDone }) {
-  const [photos, setPhotos] = useState([]);
-  const [uploadingSlot, setUploadingSlot] = useState(null);
-  const [creating, setCreating] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(null);
   const [err, setErr] = useState('');
-  const [zoomPhoto, setZoomPhoto] = useState(null);
+  const inputRef = useRef(null);
 
-  // Save photos array + photo_url together — same pattern as ProfileScreen
-  const savePhotos = async (newPhotos) => {
-    await sb.from('profiles').update({
-      photos: newPhotos,
-      photo_url: newPhotos[0] || null,
-    }).eq('id', currentUser.id);
-  };
-
-  const handlePhotoUpload = async (e, slotIndex) => {
+  const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setUploadingSlot(slotIndex); setErr('');
+    setUploading(true); setErr('');
     try {
       const url = await window.uploadPhoto(file);
-      const newPhotos = [...photos];
-      newPhotos[slotIndex] = url;
-      const cleaned = newPhotos.filter(Boolean);
-      await savePhotos(cleaned);
-      setPhotos(cleaned);
-    } catch(e) { setErr('Upload failed. Please try again.'); }
-    setUploadingSlot(null);
-    e.target.value = '';
+      await sb.from('profiles').update({ photo_url: url }).eq('id', currentUser.id);
+      setPhotoUrl(url);
+    } catch(err) { setErr('Upload failed. Please try again.'); }
+    setUploading(false);
   };
-
-  const removePhoto = async (slotIndex) => {
-    const newPhotos = photos.filter((_,i) => i !== slotIndex);
-    await savePhotos(newPhotos);
-    setPhotos(newPhotos);
-  };
-
-  const handleCreateProfile = async () => {
-    setCreating(true);
-    try {
-      const { data: profile } = await sb.from('profiles').select('first_name, last_name, age').eq('id', currentUser.id).maybeSingle();
-      const firstName = profile?.first_name || '';
-      const lastName = profile?.last_name || '';
-      const age = profile?.age || 'not provided';
-      const email = currentUser.email;
-      const isFoundingMember = new Date() < new Date('2026-06-01');
-      const signupTime = new Date().toLocaleString('en-GB', { dateStyle:'full', timeStyle:'short' });
-      window.sendEmail(email, `Welcome to Next Hello, ${firstName}! 💕`,
-        `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
-          <div style="font-size:11px;letter-spacing:0.2em;color:#C8614A;margin-bottom:4px;">N E X T</div>
-          <div style="font-size:36px;font-weight:700;color:#FAFAF8;margin-bottom:24px;">Hello</div>
-          <p style="font-size:19px;color:#F0DDD4;margin-bottom:6px;">Hi ${firstName}! 👋</p>
-          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">Welcome to Next Hello — and congratulations on being one of our very first members! 🎉</p>
-          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:16px;">I'm Paul, the founder. Not a faceless corporation with a ping pong table and a juice bar. Just someone who got fed up with expensive, impersonal dating sites and decided to do something about it.</p>
-          ${isFoundingMember ? `<div style="background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);border-radius:12px;padding:14px 18px;margin-bottom:16px;"><p style="font-size:14px;color:#FFD700;margin:0;line-height:1.7;">👑 <strong>You're a VIP Founding Member</strong> — Next Hello is completely free for you for a full 12 months.</p></div>` : ''}
-          <p style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.8;margin-bottom:16px;">
-            💕 <strong style="color:#fff;">Browse and say Hello</strong> to anyone who catches your eye<br/>
-            👋 <strong style="color:#fff;">Not interested?</strong> Just say Goodbye — they'll never know<br/>
-            🎉 <strong style="color:#fff;">Check out Events</strong> — meet members in real life
-          </p>
-          <a href="https://app.nexthello.co.uk" style="display:inline-block;background:linear-gradient(135deg,#C8614A,#D4775F);color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;">Go to Next Hello →</a>
-          <p style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:28px;line-height:1.75;">Welcome aboard. One Hello really can change everything. 💕<br/><br/><strong style="color:#F0DDD4;">Paul x</strong></p>
-        </div>`
-      ).catch(e => console.log('Welcome email failed:', e));
-      window.sendEmail('pbhalfpenny@icloud.com', `🎉 New member joined Next Hello`,
-        `<div style="font-family:Georgia,serif;max-width:500px;margin:0 auto;padding:28px 24px;background:#1E1C1B;color:#FAFAF8;border-radius:16px;">
-          <div style="font-size:28px;font-weight:700;color:#FAFAF8;margin-bottom:20px;">New Member Alert 🎉</div>
-          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Name:</strong> ${firstName} ${lastName}</p>
-          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Email:</strong> ${email}</p>
-          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Age:</strong> ${age}</p>
-          <p style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.75;margin-bottom:8px;"><strong style="color:#fff;">Signed up:</strong> ${signupTime}</p>
-          ${isFoundingMember ? `<p style="font-size:14px;color:#FFD700;margin-top:12px;">👑 VIP Founding Member</p>` : ''}
-        </div>`
-      ).catch(e => console.log('Admin notification failed:', e));
-    } catch(e) { console.log('Profile fetch for email failed:', e); }
-    // Send in-app welcome message — once only, fire and forget
-    try {
-      await sb.rpc('send_welcome_message', { p_recipient: currentUser.id });
-    } catch(e) { console.log('Welcome message failed:', e); }
-    setCreating(false);
-    onDone();
-  };
-
-  const hasMainPhoto = photos.length > 0;
 
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.white }}>
-      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"24px 24px 20px" }}>
-        <div style={{ fontSize:24, fontWeight:700, color:C.white, marginBottom:4 }}>Set up your photos</div>
-        <div style={{ fontSize:13, color:"rgba(255,255,255,0.8)", fontFamily:sf }}>Add at least one photo to continue. You can add up to 6.</div>
+      <div style={{ background:`linear-gradient(135deg,${C.coral},${C.coralMid})`, padding:"30px 24px 28px" }}>
+        <div style={{ fontSize:26, fontWeight:700, color:C.white, marginBottom:4 }}>Add your photo</div>
+        <div style={{ fontSize:14, color:"rgba(255,255,255,0.8)", fontFamily:sf }}>Members with a photo get 10× more Hellos!</div>
       </div>
-      <div style={{ flex:1, overflow:"auto", padding:"20px 20px 16px", display:"flex", flexDirection:"column", gap:16 }}>
+      <div style={{ flex:1, overflow:"auto", padding:"24px 28px", display:"flex", flexDirection:"column", gap:20 }}>
 
-        {/* Photo grid — same as ProfileScreen */}
-        <div>
-          <div style={{ fontSize:11, fontWeight:600, color:C.coral, letterSpacing:"0.08em", fontFamily:sf, marginBottom:8 }}>MY PHOTOS <span style={{ color:C.muted, fontWeight:400 }}>({photos.length}/6)</span></div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-            {[0,1,2,3,4,5].map(i => {
-              const hasPhoto = !!photos[i];
-              return (
-                <div key={i} style={{ aspectRatio:"1", borderRadius:14, overflow:"hidden", position:"relative", background:C.offWhite, border:`2px dashed ${hasPhoto?"transparent":"#DDD8D4"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  {hasPhoto ? (
-                    <>
-                      <img src={photos[i]} onClick={()=>setZoomPhoto(photos[i])} style={{ width:"100%", height:"100%", objectFit:"cover", cursor:"zoom-in" }} alt=""/>
-                      {i===0 && <div style={{ position:"absolute", bottom:4, left:4, background:C.coral, borderRadius:8, padding:"2px 6px", fontSize:9, color:C.white, fontWeight:700, fontFamily:sf }}>MAIN</div>}
-                      <button onClick={()=>removePhoto(i)} style={{ position:"absolute", top:4, right:4, width:20, height:20, borderRadius:"50%", background:"rgba(0,0,0,0.6)", border:"none", color:C.white, fontSize:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
-                    </>
-                  ) : (
-                    <label style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-                      {uploadingSlot===i ? (
-                        <div style={{ fontSize:18, color:C.muted }}>⏳</div>
-                      ) : (
-                        <>
-                          <div style={{ fontSize:22, color:"#CCC", marginBottom:2 }}>+</div>
-                          <div style={{ fontSize:9, color:C.muted, fontFamily:sf }}>{i===0?"Add photo":"Add"}</div>
-                        </>
-                      )}
-                      <input type="file" accept="image/*" onChange={e=>handlePhotoUpload(e,i)} style={{ display:"none" }}/>
-                    </label>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <p style={{ fontSize:11, color:C.muted, fontFamily:sf, marginTop:8, textAlign:"center", lineHeight:1.5 }}>📸 Tap + to add · Tap ✕ to remove · First photo is your main profile photo</p>
+        {/* Amusing note */}
+        <div style={{ background:"#FFF8F0", border:"1.5px solid #FFD580", borderRadius:16, padding:"16px 18px" }}>
+          <div style={{ fontSize:13, fontWeight:700, color:"#B8860B", fontFamily:sf, marginBottom:8 }}>📸 A quick note before you upload...</div>
+          <p style={{ fontSize:13, color:"#5D4E00", fontFamily:sf, margin:0, lineHeight:1.75 }}>
+            We'd love to see <strong>YOU</strong> — your actual face, your genuine smile, the real you.<br/><br/>
+            Not your car. Not your cat. Not a sunset from 2003.<br/><br/>
+            This is a dating app, not AutoTrader. And while Whiskers is no doubt adorable, it's <em>you</em> people want to meet.<br/><br/>
+            One clear, recent photo of your lovely face is all we ask. You've got this! 😄
+          </p>
         </div>
 
-        {err && <p style={{ fontSize:13, color:C.coral, fontFamily:sf, textAlign:"center", margin:0 }}>{err}</p>}
-
-        {!hasMainPhoto && (
-          <div style={{ background:"#FFF8F0", border:"1.5px solid #FFD580", borderRadius:14, padding:"12px 16px" }}>
-            <p style={{ fontSize:13, color:"#5D4E00", fontFamily:sf, margin:0, lineHeight:1.7, textAlign:"center" }}>
-              Please add at least one photo to continue.<br/>
-              <span style={{ fontSize:12, color:"#B8860B" }}>Smiling photos get the most Hellos! 😄</span>
-            </p>
+        {/* Photo upload circle */}
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14 }}>
+          <div onClick={()=>inputRef.current?.click()} style={{ width:140, height:140, borderRadius:"50%", border:`3px dashed ${photoUrl?C.coral:"#DDD8D4"}`, background:photoUrl?"transparent":C.offWhite, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", overflow:"hidden", position:"relative" }}>
+            {photoUrl ? (
+              <img src={photoUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt=""/>
+            ) : (
+              <div style={{ textAlign:"center" }}>
+                <div style={{ fontSize:48 }}>📷</div>
+                <div style={{ fontSize:12, color:C.muted, fontFamily:sf, marginTop:6 }}>Tap to add photo</div>
+              </div>
+            )}
+            {uploading && (
+              <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <div style={{ fontSize:13, color:C.white, fontFamily:sf }}>Uploading...</div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+          <input ref={inputRef} type="file" accept="image/*" onChange={handleUpload} style={{ display:"none" }}/>
+          {err && <p style={{ fontSize:13, color:C.coral, fontFamily:sf, textAlign:"center" }}>{err}</p>}
+          {photoUrl && (
+            <div style={{ background:"#E8F5E9", borderRadius:14, padding:"10px 16px", display:"flex", gap:8, alignItems:"center" }}>
+              <span style={{ fontSize:18 }}>✅</span>
+              <span style={{ fontSize:13, color:"#2E7D32", fontFamily:sf }}>Looking great! Photo uploaded.</span>
+            </div>
+          )}
+        </div>
 
-      <div style={{ padding:"12px 20px 28px", borderTop:"1px solid #EAE6E2", flexShrink:0, display:"flex", flexDirection:"column", gap:10 }}>
-        <Btn onClick={hasMainPhoto ? handleCreateProfile : null} disabled={!hasMainPhoto || creating}>
-          {creating ? "Creating your profile..." : hasMainPhoto ? "Create Profile →" : "Add a photo to continue"}
+        <div style={{ background:C.coralPale, borderRadius:14, padding:"12px 16px" }}>
+          <p style={{ fontSize:12, color:C.coral, fontFamily:sf, margin:0, lineHeight:1.6, textAlign:"center" }}>
+            💡 <strong>Tips:</strong> Good lighting · Face clearly visible · Smiling · Recent photo<br/>
+            Smiling photos get significantly more Hellos — fact! 😊
+          </p>
+        </div>
+      </div>
+      <div style={{ padding:"12px 24px 28px", borderTop:"1px solid #EAE6E2", display:"flex", flexDirection:"column", gap:10 }}>
+        <Btn onClick={onDone} disabled={!photoUrl}>
+          {photoUrl ? "Let's go! →" : "Please add a photo to continue"}
         </Btn>
         <button onClick={onDone} style={{ background:"none", border:"none", color:C.muted, fontSize:13, fontFamily:sf, cursor:"pointer", padding:"6px" }}>
-          Skip for now (you can add photos later)
+          Skip for now (you can add one later)
         </button>
       </div>
-
-      {zoomPhoto && (
-        <div onClick={()=>setZoomPhoto(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, cursor:"zoom-out" }}>
-          <button onClick={()=>setZoomPhoto(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, color:"white", fontSize:18, cursor:"pointer" }}>✕</button>
-          <img src={zoomPhoto} style={{ maxWidth:"95vw", maxHeight:"90vh", borderRadius:16, objectFit:"contain" }} alt=""/>
-        </div>
-      )}
     </div>
   );
 }
@@ -2954,11 +2580,11 @@ function PhotoUploadScreen({ currentUser, onDone }) {
   if (screen === "onboarding-reg") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("register")} ctaText="Create My Profile →"/></PhoneShell>;
   if (screen === "login") return <PhoneShell bg={C.white}><StatusBar light/><LoginScreen onBack={()=>setScreen("splash")} onSuccess={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "register") return <PhoneShell bg={C.white}><StatusBar light/><RegisterScreen onBack={()=>setScreen("splash")} onSuccess={handleRegisterSuccess}/></PhoneShell>;
-  if (screen === "photo") return <PhoneShell bg={C.white}><StatusBar light/><PhotoUploadScreen currentUser={currentUser} onDone={()=>setScreen("app")}/></PhoneShell>;
+  if (screen === "photo") return <PhoneShell bg={C.white}><StatusBar light/><PhotoUploadScreen currentUser={currentUser} onDone={()=>setScreen("onboarding")}/></PhoneShell>;
   if (screen === "onboarding") return <PhoneShell bg={C.dark}><StatusBar/><OnboardingScreens onDone={()=>setScreen("app")}/></PhoneShell>;
   if (screen === "rules") return <PhoneShell bg={C.white}><StatusBar light/><RulesScreen onBack={()=>setScreen("app")}/></PhoneShell>;
+  if (screen === "reset-password") return <PhoneShell bg={C.white}><StatusBar light/><ResetPasswordScreen onDone={()=>setScreen("splash")}/></PhoneShell>;
   if (screen === "help") return <PhoneShell bg={C.white}><StatusBar light/><HelpScreen onBack={()=>setScreen("app")} currentUser={currentUser}/></PhoneShell>;
-  if (screen === "suggestions") return <PhoneShell bg={C.white}><StatusBar light/><SuggestionsScreen onBack={()=>setScreen("app")} currentUser={currentUser}/></PhoneShell>;
 
   return (
     <PhoneShell bg={darkBg?C.dark:safeBg?C.coralPale:C.white}>
@@ -2970,13 +2596,14 @@ function PhotoUploadScreen({ currentUser, onDone }) {
         {tab==="offers" && <OffersScreen/>}
         {tab==="safety" && <SafetyScreen/>}
         {tab==="admin" && currentUser?.id && isGodMode(currentUser) && <AdminScreen currentUser={currentUser}/>}
-        {tab==="profile" && currentUser?.id && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")} onViewHelp={()=>setScreen("help")} onPrefsUpdated={loadUserPrefs} onViewSuggestions={()=>setScreen("suggestions")}/>}
+        {tab==="profile" && currentUser?.id && <ProfileScreen currentUser={currentUser} onSignOut={handleSignOut} onViewIntro={()=>setScreen("onboarding")} onViewRules={()=>setScreen("rules")} onViewHelp={()=>setScreen("help")}/>}
       </div>
       <BottomNav active={tab} setActive={setTab} darkBg={darkBg} helloCount={helloCount} isFounder={isGodMode(currentUser)}/>
     </PhoneShell>
   );
 }
 
+console.log("BUILD: hello-fix-v3 loaded");
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App/>);
 </script>
