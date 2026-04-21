@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Next Hello · v1.51</title>
+<title>Next Hello · v1.52</title>
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -2448,13 +2448,21 @@ function App() {
   };
 
   useEffect(() => {
-    // Check for password reset hash in URL
-    if (window.location.hash === '#reset-password') {
+    // Detect Supabase password recovery link BEFORE anything else.
+    // Recovery URLs contain #access_token=...&type=recovery in the hash.
+    const hash = window.location.hash || '';
+    const isRecovery = hash.includes('type=recovery') || hash.includes('#reset-password');
+    if (isRecovery) {
       setScreen("reset-password");
       setLoading(false);
-      return;
+      // Still subscribe so PASSWORD_RECOVERY event keeps it on reset screen
+      const { data: { subscription } } = auth.onAuthChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') { setScreen("reset-password"); }
+        // Ignore SIGNED_IN during recovery — do not route to app
+      });
+      return () => subscription?.unsubscribe();
     }
-    // Check if already logged in
+    // Normal flow — check if already logged in
     auth.getUser().then(({ data }) => {
       if (data?.user) { setCurrentUser(data.user); loadUserPrefs(data.user); setScreen("app"); }
       setLoading(false);
